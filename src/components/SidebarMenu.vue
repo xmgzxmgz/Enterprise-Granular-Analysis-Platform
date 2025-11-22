@@ -2,9 +2,10 @@
   <div class="sidebar">
     <el-menu
       :default-active="defaultActive"
+      :default-openeds="openeds"
       :collapse="isMobile"
       class="el-menu-vertical-demo"
-      :unique-opened="true"
+      :unique-opened="false"
       :router="true"
     >
       <el-sub-menu index="1">
@@ -55,13 +56,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 defineProps<{ isMobile: boolean }>()
 
 const route = useRoute()
 const defaultActive = computed(() => route.fullPath)
+const height = ref(window.innerHeight)
+const onResize = () => (height.value = window.innerHeight)
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
+const openeds = computed(() => {
+  if (height.value > 780) return ['1', '1-1', '1-1-1', '1-1-2', '1-1-3', '2', '2-2']
+  if (height.value > 640) return ['1', '1-1', '2']
+  return ['1']
+})
 </script>
 
 <style scoped>
@@ -74,4 +84,18 @@ const defaultActive = computed(() => route.fullPath)
   background: transparent;
   color: var(--text-primary);
 }
+.el-sub-menu__title, .el-menu-item {
+  border-radius: 8px;
+  margin: 2px 8px;
+  padding-left: 12px;
+}
+.el-menu-item.is-active {
+  border-left: 3px solid var(--accent);
+}
+.el-sub-menu__title:hover, .el-menu-item:hover {
+  background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(59,130,246,0));
+}
+.el-menu .el-sub-menu .el-sub-menu__title { padding-left: 20px; }
+.el-menu .el-sub-menu .el-sub-menu .el-sub-menu__title { padding-left: 28px; }
+.el-menu .el-sub-menu .el-sub-menu .el-sub-menu .el-menu-item { padding-left: 36px; }
 </style>

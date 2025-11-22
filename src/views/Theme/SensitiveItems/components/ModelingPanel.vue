@@ -18,6 +18,10 @@
           <div class="flow-wrap">
             <vue-flow :nodes="nodes" :edges="edges" fit-view />
           </div>
+          <div class="charts">
+            <div ref="stressRef" class="chart" />
+            <div ref="trainMetricRef" class="chart" />
+          </div>
         </el-card>
       </div>
       <div v-else-if="active === 'alg-optional'" class="box">
@@ -61,8 +65,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
+import * as echarts from 'echarts'
 
 const active = ref('alg-current')
 const nodes = ref([
@@ -89,6 +94,48 @@ const prepData = ref([
   { name: '出口地区', type: 'category', missing: '1.2%', desc: '省市编码' },
   { name: '物流时长', type: 'int', missing: '0.7%', desc: '单位：天' }
 ])
+
+const stressRef = ref<HTMLDivElement | null>(null)
+const trainMetricRef = ref<HTMLDivElement | null>(null)
+let disposers: (() => void)[] = []
+const renderStress = () => {
+  if (!stressRef.value) return
+  const chart = echarts.init(stressRef.value)
+  chart.setOption({
+    title: { text: '算法压力测试（QPS/耗时）' },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['QPS', '耗时(ms)'] },
+    xAxis: { type: 'category', data: ['XGBoost', 'LightGBM', 'RF', 'SVM'] },
+    yAxis: { type: 'value' },
+    series: [
+      { name: 'QPS', type: 'bar', data: [380, 420, 310, 200], itemStyle: { color: '#3b82f6' } },
+      { name: '耗时(ms)', type: 'line', data: [42, 36, 58, 80] }
+    ]
+  })
+  window.addEventListener('resize', () => chart.resize())
+  return () => { window.removeEventListener('resize', () => chart.resize()); chart.dispose() }
+}
+const renderTrainMetric = () => {
+  if (!trainMetricRef.value) return
+  const chart = echarts.init(trainMetricRef.value)
+  chart.setOption({
+    title: { text: '训练过程指标（AUC/损失）' },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: Array.from({ length: 10 }, (_, i) => `迭代${i + 1}`) },
+    yAxis: { type: 'value' },
+    series: [
+      { name: 'AUC', type: 'line', data: [0.72,0.74,0.75,0.76,0.78,0.80,0.82,0.84,0.85,0.87] },
+      { name: 'Loss', type: 'line', data: [0.58,0.52,0.49,0.46,0.42,0.40,0.37,0.35,0.34,0.33] }
+    ]
+  })
+  window.addEventListener('resize', () => chart.resize())
+  return () => { window.removeEventListener('resize', () => chart.resize()); chart.dispose() }
+}
+onMounted(() => {
+  const d1 = renderStress(); if (d1) disposers.push(d1)
+  const d2 = renderTrainMetric(); if (d2) disposers.push(d2)
+})
+onUnmounted(() => { disposers.forEach((d) => d()) })
 </script>
 
 <style scoped>
@@ -99,4 +146,6 @@ const prepData = ref([
 .box { padding: 8px; }
 .title { font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
 .flow-wrap { height: 280px; }
+.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.chart { height: 240px; }
 </style>

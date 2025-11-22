@@ -10,9 +10,6 @@
         </el-header>
         <el-main class="app-main">
           <router-view />
-          <div class="placeholder">
-            <el-empty description="右侧内容留白，后续按页面需求填充" />
-          </div>
         </el-main>
       </el-container>
     </el-container>
@@ -52,7 +49,5 @@ const asideWidth = computed(() => (isMobile.value ? '64px' : '260px'))
   padding: 0;
   background: var(--main-bg);
 }
-.placeholder {
-  padding: 24px;
-}
+</style>
 </style>
