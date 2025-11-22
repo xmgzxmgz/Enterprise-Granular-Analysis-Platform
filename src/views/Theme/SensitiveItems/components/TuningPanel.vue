@@ -242,9 +242,10 @@ const renderDist = () => {
     const cat = params.name
     router.push({ path: '/rating-profile/基本信息', query: { category: cat } })
   })
-  window.addEventListener('resize', () => chart.resize())
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener('resize', () => chart.resize())
+    window.removeEventListener('resize', onResize)
     chart.dispose()
   }
 }
@@ -266,9 +267,10 @@ const renderHistory = () => {
     tooltip: { trigger: 'axis' }
   }
   chart.setOption(option)
-  window.addEventListener('resize', () => chart.resize())
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener('resize', () => chart.resize())
+    window.removeEventListener('resize', onResize)
     chart.dispose()
   }
 }
@@ -289,9 +291,10 @@ const renderBox = () => {
     ]
   }
   chart.setOption(option)
-  window.addEventListener('resize', () => chart.resize())
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener('resize', () => chart.resize())
+    window.removeEventListener('resize', onResize)
     chart.dispose()
   }
 }
@@ -326,9 +329,10 @@ const renderFeature = () => {
     series: [{ type: 'bar', data: features.map((f) => f.volume), itemStyle: { color: '#3b82f6' } }]
   }
   chart.setOption(option)
-  window.addEventListener('resize', () => chart.resize())
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener('resize', () => chart.resize())
+    window.removeEventListener('resize', onResize)
     chart.dispose()
   }
 }
@@ -349,9 +353,10 @@ const renderClass = () => {
     ]
   }
   chart.setOption(option)
-  window.addEventListener('resize', () => chart.resize())
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener('resize', () => chart.resize())
+    window.removeEventListener('resize', onResize)
     chart.dispose()
   }
 }

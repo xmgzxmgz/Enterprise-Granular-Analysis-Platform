@@ -3,7 +3,13 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/theme-management'
+    redirect: '/home'
+  },
+  {
+    path: '/home',
+    name: '首页',
+    component: () => import('@/views/Home.vue'),
+    meta: { breadcrumb: ['首页'] }
   },
   {
     path: '/theme-management',

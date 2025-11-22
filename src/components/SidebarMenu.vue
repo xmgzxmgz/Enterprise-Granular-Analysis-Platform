@@ -8,6 +8,7 @@
       :unique-opened="false"
       :router="true"
     >
+      <el-menu-item index="/home">返回主页面</el-menu-item>
       <el-sub-menu index="1">
         <template #title>
           <span>分类主题管理</span>
@@ -83,11 +84,11 @@ const openeds = computed(() => {
   border-right: none;
   background: transparent;
   color: var(--text-primary);
+  --el-menu-level-indent: 18px;
 }
 .el-sub-menu__title, .el-menu-item {
   border-radius: 8px;
   margin: 2px 8px;
-  padding-left: 12px;
 }
 .el-menu-item.is-active {
   border-left: 3px solid var(--accent);
@@ -95,7 +96,5 @@ const openeds = computed(() => {
 .el-sub-menu__title:hover, .el-menu-item:hover {
   background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(59,130,246,0));
 }
-.el-menu .el-sub-menu .el-sub-menu__title { padding-left: 20px; }
-.el-menu .el-sub-menu .el-sub-menu .el-sub-menu__title { padding-left: 28px; }
-.el-menu .el-sub-menu .el-sub-menu .el-sub-menu .el-menu-item { padding-left: 36px; }
+.el-menu-vertical-demo .el-menu-item { line-height: 40px; }
 </style>

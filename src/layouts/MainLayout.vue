@@ -9,6 +9,7 @@
           <AppHeader />
         </el-header>
         <el-main class="app-main">
+          <HeroAnimation />
           <router-view />
         </el-main>
       </el-container>
@@ -20,6 +21,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import SidebarMenu from '@/components/SidebarMenu.vue'
 import AppHeader from '@/components/AppHeader.vue'
+import HeroAnimation from '@/components/HeroAnimation.vue'
 
 const width = ref(window.innerWidth)
 const onResize = () => (width.value = window.innerWidth)
@@ -49,5 +51,4 @@ const asideWidth = computed(() => (isMobile.value ? '64px' : '260px'))
   padding: 0;
   background: var(--main-bg);
 }
-</style>
 </style>

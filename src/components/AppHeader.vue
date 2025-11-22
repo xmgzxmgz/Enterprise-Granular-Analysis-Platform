@@ -1,7 +1,7 @@
 <template>
   <div class="header-wrap">
     <div class="left">
-      <el-breadcrumb separator="/">
+      <el-breadcrumb separator="/" class="crumb">
         <el-breadcrumb-item
           v-for="(c, idx) in crumbItems"
           :key="idx"
@@ -9,9 +9,7 @@
           @click="onCrumbClick(idx)"
         >{{ c.label }}</el-breadcrumb-item>
       </el-breadcrumb>
-      <div class="search">
-        <el-input v-model="keyword" placeholder="搜索页面/功能" clearable @keyup.enter="onSearch" />
-      </div>
+      <el-input v-model="keyword" class="search-input" size="large" placeholder="搜索页面/功能" clearable @keyup.enter="onSearch" />
     </div>
     <div class="right">
       <el-tag type="info">Enterprise Granular Analysis Platform</el-tag>
@@ -21,29 +19,22 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute, useRouter, RouteLocationMatched } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 const keyword = ref('')
 
 const crumbItems = computed<{ label: string; name?: string }[]>(() => {
-  const matched = route.matched as RouteLocationMatched[]
-  if (matched.length) {
-    const labels = matched.map((m) => (Array.isArray(m.meta?.breadcrumb) ? (m.meta!.breadcrumb as string[]) : [m.name as string || m.path]))
-    const flat = ([] as string[]).concat(...labels)
-    return flat.map((label, i) => ({ label, name: matched[i]?.name as string | undefined }))
-  }
-  const metaCrumbs = route.meta?.breadcrumb as string[] | undefined
-  if (metaCrumbs && metaCrumbs.length) return metaCrumbs.map((l) => ({ label: l }))
-  const parts = route.path.split('/').filter(Boolean).map((p) => decodeURIComponent(p))
-  return parts.map((l) => ({ label: l }))
+  const matched = route.matched
+  // 优先使用当前匹配链的名称，避免重复拼接 meta.breadcrumb
+  const items = matched.map((m) => ({ label: String(m.name ?? m.path), name: String(m.name ?? '') }))
+  return items
 })
 
 const onCrumbClick = (index: number) => {
-  const matched = route.matched
-  const rec = matched[index]
-  if (rec?.name) router.push({ name: rec.name as string })
+  const rec = route.matched[index]
+  if (rec?.name) router.push({ name: String(rec.name) })
 }
 
 const onSearch = () => {
@@ -65,14 +56,15 @@ const onSearch = () => {
 
 <style scoped>
 .header-wrap {
-  height: 60px;
+  min-height: 80px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 8px 16px;
 }
-.left { color: var(--text-primary); }
-.right { color: var(--text-secondary); }
+.left { color: var(--text-primary); display: flex; flex-direction: column; gap: 6px; width: 70%; }
+.right { color: var(--text-secondary); display: flex; align-items: center; justify-content: flex-end; width: 30%; }
 .crumb-item { cursor: pointer; }
-.search { margin-left: 12px; width: 300px; display: inline-block; }
+.crumb { width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-input { width: 100%; }
 </style>

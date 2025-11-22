@@ -112,8 +112,9 @@ const renderStress = () => {
       { name: '耗时(ms)', type: 'line', data: [42, 36, 58, 80] }
     ]
   })
-  window.addEventListener('resize', () => chart.resize())
-  return () => { window.removeEventListener('resize', () => chart.resize()); chart.dispose() }
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
+  return () => { window.removeEventListener('resize', onResize); chart.dispose() }
 }
 const renderTrainMetric = () => {
   if (!trainMetricRef.value) return
@@ -128,8 +129,9 @@ const renderTrainMetric = () => {
       { name: 'Loss', type: 'line', data: [0.58,0.52,0.49,0.46,0.42,0.40,0.37,0.35,0.34,0.33] }
     ]
   })
-  window.addEventListener('resize', () => chart.resize())
-  return () => { window.removeEventListener('resize', () => chart.resize()); chart.dispose() }
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
+  return () => { window.removeEventListener('resize', onResize); chart.dispose() }
 }
 onMounted(() => {
   const d1 = renderStress(); if (d1) disposers.push(d1)
