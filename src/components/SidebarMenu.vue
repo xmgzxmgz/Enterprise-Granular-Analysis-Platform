@@ -20,9 +20,19 @@
               <span>敏感物品管控</span>
             </template>
             <el-menu-item index="/theme-management/出口风险分类/敏感物品管控/两用物项">两用物项</el-menu-item>
-            <el-menu-item index="/theme-management/出口风险分类/敏感物品管控/冷冻水产品">冷冻水产品</el-menu-item>
           </el-sub-menu>
-          <el-menu-item index="/theme-management/出口风险分类/跨境电商出口敏感指标数频分配">跨境电商出口敏感指标数频分配</el-menu-item>
+          <el-sub-menu index="1-1-2">
+            <template #title>
+              <span>重点物品</span>
+            </template>
+            <el-menu-item index="/theme-management/出口风险分类/重点物品/冷冻水产品">冷冻水产品</el-menu-item>
+          </el-sub-menu>
+          <el-sub-menu index="1-1-3">
+            <template #title>
+              <span>跨境电商出口敏感指标数频分配</span>
+            </template>
+            <el-menu-item index="/theme-management/出口风险分类/跨境电商出口敏感指标数频分配/数频分配">数频分配</el-menu-item>
+          </el-sub-menu>
         </el-sub-menu>
         <el-menu-item index="/theme-management/政策惠企">政策惠企</el-menu-item>
       </el-sub-menu>

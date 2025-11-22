@@ -6,6 +6,7 @@ import '@/styles/theme.css'
 import App from './App.vue'
 import router from './router'
 import { useAutoTheme } from './composables/useAutoTheme'
+import '@vue-flow/core/dist/style.css'
 
 const app = createApp(App)
 app.use(ElementPlus)

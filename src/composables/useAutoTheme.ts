@@ -7,14 +7,13 @@ export function useAutoTheme() {
   }
 
   const media = window.matchMedia('(prefers-color-scheme: dark)')
-  const handleMedia = (e: MediaQueryListEvent | MediaQueryList) => {
-    const isDark = 'matches' in e ? e.matches : e.matches
-    apply(isDark ? 'dark' : 'light')
+  const handleMedia = (e: MediaQueryListEvent) => {
+    apply(e.matches ? 'dark' : 'light')
   }
   // 初次按系统偏好设置
   apply(media.matches ? 'dark' : 'light')
   // 监听系统主题变化
-  media.addEventListener('change', handleMedia as (e: MediaQueryListEvent) => void)
+  media.addEventListener('change', handleMedia)
 
   // 时间维度的兜底：晚7点-早7点自动暗色
   const checkTime = () => {
@@ -29,6 +28,6 @@ export function useAutoTheme() {
 
   return () => {
     window.clearInterval(timer)
-    media.removeEventListener('change', handleMedia as (e: MediaQueryListEvent) => void)
+    media.removeEventListener('change', handleMedia)
   }
 }
