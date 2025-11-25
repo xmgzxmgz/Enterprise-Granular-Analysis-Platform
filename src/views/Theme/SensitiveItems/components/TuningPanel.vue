@@ -49,7 +49,11 @@
               </el-radio-group>
             </div>
           </div>
-          <div ref="distRef" class="chart" />
+          <div class="chart-wrap">
+            <el-alert v-if="distError" type="error" :title="'后端不可联通或错误'" show-icon closable />
+            <el-empty v-else-if="!tagDist.length" description="后端无数据" />
+            <div v-else ref="distRef" class="chart" />
+          </div>
         </div>
         <div class="card">
           <div class="title">标签历史详细</div>
@@ -197,6 +201,7 @@
 import { onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import { useRouter } from 'vue-router'
+import { getTagDistribution } from '@/services/api'
 
 const router = useRouter()
 const active = ref('dualuse')
@@ -213,16 +218,16 @@ const topicTrendRef = ref<HTMLDivElement | null>(null)
 
 const distChartType = ref<'bar' | 'line'>('bar')
 
-const tagDist = reactive([
-  { name: '极高', value: 78 },
-  { name: '高', value: 52 },
-  { name: '中', value: 34 },
-  { name: '低', value: 18 }
-])
+const tagDist = reactive<{ name: string; value: number }[]>([])
+const distError = ref(false)
 
-const renderDist = () => {
+const renderDist = async () => {
   if (!distRef.value) return
   const chart = echarts.init(distRef.value)
+  if (!tagDist.length) {
+    try { const data = await getTagDistribution(); Object.assign(tagDist, data?.rows || []) } catch { distError.value = true }
+    if (!tagDist.length) return
+  }
   const sorted = [...tagDist].sort((a, b) => b.value - a.value)
   const option = {
     grid: { left: 60, right: 20, top: 30, bottom: 20 },
@@ -460,11 +465,11 @@ const finish = () => {
 }
 
 let disposers: (() => void)[] = []
-const mountCharts = () => {
+const mountCharts = async () => {
   disposers.forEach((d) => d())
   disposers = []
   if (active.value === 'dualuse') {
-    const d1 = renderDist(); if (d1) disposers.push(d1)
+    const d1 = await renderDist(); if (d1) disposers.push(d1)
     const d2 = renderHistory(); if (d2) disposers.push(d2)
     const d3 = renderBox(); if (d3) disposers.push(d3)
   } else if (active.value.endsWith('feature')) {
@@ -497,6 +502,8 @@ onUnmounted(() => {
 .panel { display: flex; }
 .left-mini-sidebar { width: 240px; border-right: 1px solid var(--border-color); background: var(--main-bg); }
 .mini { border-right: none; }
+.chart-wrap { display: flex; align-items: center; justify-content: center; height: 240px; }
+.chart { height: 100%; width: 100%; }
 .right-content { flex: 1; padding: 12px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 .card { background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; }

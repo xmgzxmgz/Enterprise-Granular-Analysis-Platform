@@ -19,8 +19,28 @@
             <vue-flow :nodes="nodes" :edges="edges" fit-view />
           </div>
           <div class="charts">
-            <div ref="stressRef" class="chart" />
-            <div ref="trainMetricRef" class="chart" />
+            <div class="chart-wrap">
+              <el-alert
+                v-if="pressureError"
+                type="error"
+                :title="'后端不可联通或错误'"
+                show-icon
+                closable
+              />
+              <el-empty v-else-if="pressureEmpty" description="后端无数据" />
+              <div v-else ref="stressRef" class="chart" />
+            </div>
+            <div class="chart-wrap">
+              <el-alert
+                v-if="trainingError"
+                type="error"
+                :title="'后端不可联通或错误'"
+                show-icon
+                closable
+              />
+              <el-empty v-else-if="trainingEmpty" description="后端无数据" />
+              <div v-else ref="trainMetricRef" class="chart" />
+            </div>
           </div>
         </el-card>
       </div>
@@ -44,7 +64,12 @@
           <el-table :data="prepData" height="360">
             <el-table-column prop="name" label="字段" width="180" sortable />
             <el-table-column prop="type" label="类型" width="120" />
-            <el-table-column prop="missing" label="缺失率" width="120" sortable />
+            <el-table-column
+              prop="missing"
+              label="缺失率"
+              width="120"
+              sortable
+            />
             <el-table-column prop="desc" label="说明" />
           </el-table>
         </el-card>
@@ -65,89 +90,168 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { VueFlow, useVueFlow } from '@vue-flow/core'
-import * as echarts from 'echarts'
+import { onMounted, onUnmounted, ref } from "vue";
+import { VueFlow, useVueFlow } from "@vue-flow/core";
+import * as echarts from "echarts";
+import { getModelPressure, getModelTraining } from "@/services/api";
 
-const active = ref('alg-current')
+const active = ref("alg-current");
 const nodes = ref([
-  { id: '1', position: { x: 0, y: 0 }, label: '输入' },
-  { id: '2', position: { x: 180, y: 0 }, label: '特征工程' },
-  { id: '3', position: { x: 360, y: 0 }, label: 'XGBoost' },
-  { id: '4', position: { x: 540, y: 0 }, label: '评估' }
-])
+  { id: "1", position: { x: 0, y: 0 }, label: "输入" },
+  { id: "2", position: { x: 180, y: 0 }, label: "特征工程" },
+  { id: "3", position: { x: 360, y: 0 }, label: "XGBoost" },
+  { id: "4", position: { x: 540, y: 0 }, label: "评估" },
+]);
 const edges = ref([
-  { id: 'e1-2', source: '1', target: '2' },
-  { id: 'e2-3', source: '2', target: '3' },
-  { id: 'e3-4', source: '3', target: '4' }
-])
+  { id: "e1-2", source: "1", target: "2" },
+  { id: "e2-3", source: "2", target: "3" },
+  { id: "e3-4", source: "3", target: "4" },
+]);
 
 const algOptions = ref([
-  { name: 'LightGBM', type: '梯度提升', desc: '高效、快速' },
-  { name: 'RandomForest', type: '集成学习', desc: '鲁棒性强' },
-  { name: 'SVM', type: '监督学习', desc: '间隔最大化' }
-])
+  { name: "LightGBM", type: "梯度提升", desc: "高效、快速" },
+  { name: "RandomForest", type: "集成学习", desc: "鲁棒性强" },
+  { name: "SVM", type: "监督学习", desc: "间隔最大化" },
+]);
 
 const prepData = ref([
-  { name: '交易金额', type: 'float', missing: '2.1%', desc: '单位：万元' },
-  { name: '商品类别', type: 'category', missing: '0.0%', desc: '编码映射' },
-  { name: '出口地区', type: 'category', missing: '1.2%', desc: '省市编码' },
-  { name: '物流时长', type: 'int', missing: '0.7%', desc: '单位：天' }
-])
+  { name: "交易金额", type: "float", missing: "2.1%", desc: "单位：万元" },
+  { name: "商品类别", type: "category", missing: "0.0%", desc: "编码映射" },
+  { name: "出口地区", type: "category", missing: "1.2%", desc: "省市编码" },
+  { name: "物流时长", type: "int", missing: "0.7%", desc: "单位：天" },
+]);
 
-const stressRef = ref<HTMLDivElement | null>(null)
-const trainMetricRef = ref<HTMLDivElement | null>(null)
-let disposers: (() => void)[] = []
-const renderStress = () => {
-  if (!stressRef.value) return
-  const chart = echarts.init(stressRef.value)
+const stressRef = ref<HTMLDivElement | null>(null);
+const trainMetricRef = ref<HTMLDivElement | null>(null);
+const pressureError = ref(false);
+const pressureEmpty = ref(false);
+const trainingError = ref(false);
+const trainingEmpty = ref(false);
+let disposers: (() => void)[] = [];
+const renderStress = async () => {
+  if (!stressRef.value) return;
+  const chart = echarts.init(stressRef.value);
+  let qps: number[] = [];
+  let time: number[] = [];
+  try {
+    const data = await getModelPressure();
+    if (Array.isArray(data?.qps)) qps = data.qps;
+    if (Array.isArray(data?.time)) time = data.time;
+  } catch {
+    pressureError.value = true;
+  }
+  if (!qps.length || !time.length) {
+    pressureEmpty.value = !pressureError.value;
+    chart.dispose();
+    return;
+  }
   chart.setOption({
-    title: { text: '算法压力测试（QPS/耗时）' },
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['QPS', '耗时(ms)'] },
-    xAxis: { type: 'category', data: ['XGBoost', 'LightGBM', 'RF', 'SVM'] },
-    yAxis: { type: 'value' },
+    title: { text: "算法压力测试（QPS/耗时）" },
+    tooltip: { trigger: "axis" },
+    legend: { data: ["QPS", "耗时(ms)"] },
+    xAxis: { type: "category", data: ["XGBoost", "LightGBM", "RF", "SVM"] },
+    yAxis: { type: "value" },
     series: [
-      { name: 'QPS', type: 'bar', data: [380, 420, 310, 200], itemStyle: { color: '#3b82f6' } },
-      { name: '耗时(ms)', type: 'line', data: [42, 36, 58, 80] }
-    ]
-  })
-  const onResize = () => chart.resize()
-  window.addEventListener('resize', onResize)
-  return () => { window.removeEventListener('resize', onResize); chart.dispose() }
-}
-const renderTrainMetric = () => {
-  if (!trainMetricRef.value) return
-  const chart = echarts.init(trainMetricRef.value)
+      { name: "QPS", type: "bar", data: qps, itemStyle: { color: "#3b82f6" } },
+      { name: "耗时(ms)", type: "line", data: time },
+    ],
+  });
+  const onResize = () => chart.resize();
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
+    chart.dispose();
+  };
+};
+const renderTrainMetric = async () => {
+  if (!trainMetricRef.value) return;
+  const chart = echarts.init(trainMetricRef.value);
+  let auc: number[] = [];
+  let loss: number[] = [];
+  try {
+    const data = await getModelTraining();
+    if (Array.isArray(data?.auc)) auc = data.auc;
+    if (Array.isArray(data?.loss)) loss = data.loss;
+  } catch {
+    trainingError.value = true;
+  }
+  if (!auc.length || !loss.length) {
+    trainingEmpty.value = !trainingError.value;
+    chart.dispose();
+    return;
+  }
   chart.setOption({
-    title: { text: '训练过程指标（AUC/损失）' },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: Array.from({ length: 10 }, (_, i) => `迭代${i + 1}`) },
-    yAxis: { type: 'value' },
+    title: { text: "训练过程指标（AUC/损失）" },
+    tooltip: { trigger: "axis" },
+    xAxis: {
+      type: "category",
+      data: Array.from({ length: 10 }, (_, i) => `迭代${i + 1}`),
+    },
+    yAxis: { type: "value" },
     series: [
-      { name: 'AUC', type: 'line', data: [0.72,0.74,0.75,0.76,0.78,0.80,0.82,0.84,0.85,0.87] },
-      { name: 'Loss', type: 'line', data: [0.58,0.52,0.49,0.46,0.42,0.40,0.37,0.35,0.34,0.33] }
-    ]
-  })
-  const onResize = () => chart.resize()
-  window.addEventListener('resize', onResize)
-  return () => { window.removeEventListener('resize', onResize); chart.dispose() }
-}
-onMounted(() => {
-  const d1 = renderStress(); if (d1) disposers.push(d1)
-  const d2 = renderTrainMetric(); if (d2) disposers.push(d2)
-})
-onUnmounted(() => { disposers.forEach((d) => d()) })
+      { name: "AUC", type: "line", data: auc },
+      { name: "Loss", type: "line", data: loss },
+    ],
+  });
+  const onResize = () => chart.resize();
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
+    chart.dispose();
+  };
+};
+onMounted(async () => {
+  const d1 = await renderStress();
+  if (d1) disposers.push(d1);
+  const d2 = await renderTrainMetric();
+  if (d2) disposers.push(d2);
+});
+onUnmounted(() => {
+  disposers.forEach((d) => d());
+});
 </script>
 
 <style scoped>
-.panel { display: flex; }
-.left-mini-sidebar { width: 220px; border-right: 1px solid var(--border-color); background: var(--main-bg); }
-.mini { border-right: none; }
-.right-content { flex: 1; padding: 12px; }
-.box { padding: 8px; }
-.title { font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
-.flow-wrap { height: 280px; }
-.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-.chart { height: 240px; }
+.panel {
+  display: flex;
+}
+.left-mini-sidebar {
+  width: 220px;
+  border-right: 1px solid var(--border-color);
+  background: var(--main-bg);
+}
+.mini {
+  border-right: none;
+}
+.right-content {
+  flex: 1;
+  padding: 12px;
+}
+.box {
+  padding: 8px;
+}
+.title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.flow-wrap {
+  height: 280px;
+}
+.charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.chart-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 240px;
+}
+.chart {
+  height: 100%;
+  width: 100%;
+}
 </style>

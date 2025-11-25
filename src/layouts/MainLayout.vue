@@ -1,7 +1,11 @@
 <template>
   <el-config-provider namespace="el">
     <el-container class="app-container">
-      <el-aside :width="asideWidth" class="app-aside" :class="{ collapsed: isMobile }">
+      <el-aside
+        :width="asideWidth"
+        class="app-aside"
+        :class="{ collapsed: isMobile }"
+      >
         <SidebarMenu :is-mobile="isMobile" />
       </el-aside>
       <el-container>
@@ -9,7 +13,6 @@
           <AppHeader />
         </el-header>
         <el-main class="app-main">
-          <HeroAnimation />
           <router-view />
         </el-main>
       </el-container>
@@ -18,18 +21,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import SidebarMenu from '@/components/SidebarMenu.vue'
-import AppHeader from '@/components/AppHeader.vue'
-import HeroAnimation from '@/components/HeroAnimation.vue'
+import { computed, onMounted, onUnmounted, ref } from "vue";
+import SidebarMenu from "@/components/SidebarMenu.vue";
+import AppHeader from "@/components/AppHeader.vue";
 
-const width = ref(window.innerWidth)
-const onResize = () => (width.value = window.innerWidth)
-onMounted(() => window.addEventListener('resize', onResize))
-onUnmounted(() => window.removeEventListener('resize', onResize))
+const width = ref(window.innerWidth);
+const onResize = () => (width.value = window.innerWidth);
+onMounted(() => window.addEventListener("resize", onResize));
+onUnmounted(() => window.removeEventListener("resize", onResize));
 
-const isMobile = computed(() => width.value < 920)
-const asideWidth = computed(() => (isMobile.value ? '64px' : '260px'))
+const isMobile = computed(() => width.value < 920);
+const asideWidth = computed(() => (isMobile.value ? "64px" : "260px"));
 </script>
 
 <style scoped>

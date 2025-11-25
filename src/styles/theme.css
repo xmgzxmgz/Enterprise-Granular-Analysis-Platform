@@ -1,47 +1,21 @@
 :root {
-  --bg-light: #f6f9fc;
-  --bg-dark: #0b1220;
-  --sidebar-bg-light: #ffffff;
-  --header-bg-light: rgba(255, 255, 255, 0.9);
-  --main-bg-light: #f6f9fc;
-  --sidebar-bg-dark: #0f172a;
-  --header-bg-dark: rgba(15, 23, 42, 0.9);
-  --main-bg-dark: #0b1220;
-  --border-light: #e5edf5;
-  --border-dark: #1f2a44;
-  --text-primary-light: #0f2b57;
-  --text-secondary-light: #55749c;
-  --text-primary-dark: #d6e4ff;
-  --text-secondary-dark: #9fb7dd;
+  --bg: #f6f9fc;
+  --sidebar-bg: #ffffff;
+  --header-bg: rgba(255, 255, 255, 0.9);
+  --main-bg: #f6f9fc;
+  --border-color: #e5edf5;
+  --text-primary: #0f2b57;
+  --text-secondary: #55749c;
   --accent: #3b82f6; /* 主题蓝 */
   --accent-weak: #95c6ff;
 }
 
-html.light {
-  --sidebar-bg: var(--sidebar-bg-light);
-  --header-bg: var(--header-bg-light);
-  --main-bg: var(--main-bg-light);
-  --border-color: var(--border-light);
-  --text-primary: var(--text-primary-light);
-  --text-secondary: var(--text-secondary-light);
-  background: var(--bg-light);
-  color: var(--text-primary);
-}
-
-html.dark {
-  --sidebar-bg: var(--sidebar-bg-dark);
-  --header-bg: var(--header-bg-dark);
-  --main-bg: var(--main-bg-dark);
-  --border-color: var(--border-dark);
-  --text-primary: var(--text-primary-dark);
-  --text-secondary: var(--text-secondary-dark);
-  background: var(--bg-dark);
-  color: var(--text-primary);
-}
-
 /* 前卫科技感轻蓝系微动效 */
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  background: var(--bg);
+  color: var(--text-primary);
 }
 
 .el-menu .el-menu-item.is-active,
@@ -51,11 +25,19 @@ body {
 
 .el-menu .el-sub-menu__title:hover,
 .el-menu .el-menu-item:hover {
-  background: linear-gradient(90deg, rgba(59,130,246,0.08), rgba(59,130,246,0));
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.08),
+    rgba(59, 130, 246, 0)
+  );
 }
 
 .el-tag.el-tag--info {
   color: var(--text-secondary);
   border-color: var(--border-color);
-  background: linear-gradient(180deg, rgba(149,198,255,0.18), rgba(149,198,255,0.06));
+  background: linear-gradient(
+    180deg,
+    rgba(149, 198, 255, 0.18),
+    rgba(149, 198, 255, 0.06)
+  );
 }
