@@ -38,49 +38,80 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import * as echarts from 'echarts'
-const activeTab = ref<'modeling' | 'tuning' | 'publish'>('modeling')
-const freqRef = ref<HTMLDivElement | null>(null)
-const heatRef = ref<HTMLDivElement | null>(null)
+import { onMounted, ref } from "vue";
+import * as echarts from "echarts";
+const activeTab = ref<"modeling" | "tuning" | "publish">("modeling");
+const freqRef = ref<HTMLDivElement | null>(null);
+const heatRef = ref<HTMLDivElement | null>(null);
 
 onMounted(() => {
   if (freqRef.value) {
-    const c = echarts.init(freqRef.value)
+    const c = echarts.init(freqRef.value);
     c.setOption({
-      title: { text: '频次分布' },
-      xAxis: { type: 'category', data: ['低', '中', '高', '极高'] },
-      yAxis: { type: 'value' },
-      series: [{ type: 'bar', data: [24, 36, 28, 18], itemStyle: { color: '#3b82f6' } }]
-    })
+      title: { text: "频次分布" },
+      xAxis: { type: "category", data: ["低", "中", "高", "极高"] },
+      yAxis: { type: "value" },
+      series: [
+        {
+          type: "bar",
+          data: [24, 36, 28, 18],
+          itemStyle: { color: "#3b82f6" },
+        },
+      ],
+    });
   }
   if (heatRef.value) {
-    const c = echarts.init(heatRef.value)
-    const data = [] as any[]
-    const x = ['A', 'B', 'C', 'D']
-    const y = ['Q1', 'Q2', 'Q3', 'Q4']
+    const c = echarts.init(heatRef.value);
+    const data = [] as any[];
+    const x = ["A", "B", "C", "D"];
+    const y = ["Q1", "Q2", "Q3", "Q4"];
     for (let i = 0; i < x.length; i++) {
       for (let j = 0; j < y.length; j++) {
-        data.push([i, j, Math.round(Math.random() * 20 + 10)])
+        data.push([i, j, Math.round(Math.random() * 20 + 10)]);
       }
     }
     c.setOption({
-      title: { text: '企业×季度 热度' },
+      title: { text: "企业×季度 热度" },
       tooltip: {},
-      xAxis: { type: 'category', data: x },
-      yAxis: { type: 'category', data: y },
-      visualMap: { min: 10, max: 30, calculable: true, orient: 'horizontal', left: 'center', bottom: 0 },
-      series: [{ type: 'heatmap', data }]
-    })
+      xAxis: { type: "category", data: x },
+      yAxis: { type: "category", data: y },
+      visualMap: {
+        min: 10,
+        max: 30,
+        calculable: true,
+        orient: "horizontal",
+        left: "center",
+        bottom: 0,
+      },
+      series: [{ type: "heatmap", data }],
+    });
   }
-})
+});
 </script>
 
 <style scoped>
-.page-wrap { padding: 16px; }
-.top-tabs { margin-bottom: 12px; }
-.content { background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 24px; }
-.title { font-weight: 600; margin-bottom: 12px; }
-.charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.chart { height: 260px; }
+.page-wrap {
+  padding: 16px;
+}
+.top-tabs {
+  margin-bottom: 12px;
+}
+.content {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 24px;
+}
+.title {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.chart {
+  height: 260px;
+}
 </style>

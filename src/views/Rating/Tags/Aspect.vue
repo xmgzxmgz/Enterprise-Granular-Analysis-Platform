@@ -12,10 +12,14 @@
   </div>
 </template>
 
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 
 <style scoped>
-.wrap { padding: 16px; }
-.title { font-weight: 600; margin-bottom: 8px; }
+.wrap {
+  padding: 16px;
+}
+.title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
 </style>

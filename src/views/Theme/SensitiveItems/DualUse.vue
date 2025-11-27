@@ -20,16 +20,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import ModelingPanel from './components/ModelingPanel.vue'
-import TuningPanel from './components/TuningPanel.vue'
-import PublishPanel from './components/PublishPanel.vue'
+import { ref } from "vue";
+import ModelingPanel from "./components/ModelingPanel.vue";
+import TuningPanel from "./components/TuningPanel.vue";
+import PublishPanel from "./components/PublishPanel.vue";
 
-const activeTab = ref<'modeling' | 'tuning' | 'publish'>('modeling')
+const activeTab = ref<"modeling" | "tuning" | "publish">("modeling");
 </script>
 
 <style scoped>
-.page-wrap { padding: 16px; }
-.top-tabs { margin-bottom: 12px; }
-.content { background: var(--sidebar-bg); border: 1px solid var(--border-color); border-radius: 10px; }
+.page-wrap {
+  padding: 16px;
+}
+.top-tabs {
+  margin-bottom: 12px;
+}
+.content {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
 </style>
