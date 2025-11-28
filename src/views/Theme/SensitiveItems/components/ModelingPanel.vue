@@ -15,8 +15,65 @@
       <div v-if="active === 'alg-current'" class="box">
         <el-card>
           <div class="title">正在使用的算法：XGBoost</div>
-          <div class="flow-wrap">
-            <vue-flow :nodes="nodes" :edges="edges" fit-view />
+          <div class="diagram">
+            <el-tooltip
+              content="原始输入数据，来源于企业交易等"
+              placement="top"
+            >
+              <div
+                class="node"
+                @mouseenter="hover = '输入'"
+                @mouseleave="hover = ''"
+              >
+                输入
+              </div>
+            </el-tooltip>
+            <div class="arrow">→</div>
+            <el-tooltip content="编码、标准化、缺失处理等" placement="top">
+              <div
+                class="node"
+                @mouseenter="hover = '特征工程'"
+                @mouseleave="hover = ''"
+              >
+                特征工程
+              </div>
+            </el-tooltip>
+            <div class="arrow">→</div>
+            <el-tooltip content="训练100轮，学习率等参数可调" placement="top">
+              <div
+                class="node"
+                @mouseenter="hover = 'XGBoost'"
+                @mouseleave="hover = ''"
+              >
+                XGBoost
+              </div>
+            </el-tooltip>
+            <div class="arrow">→</div>
+            <el-tooltip content="AUC、F1、召回等综合评估" placement="top">
+              <div
+                class="node"
+                @mouseenter="hover = '评估'"
+                @mouseleave="hover = ''"
+              >
+                评估
+              </div>
+            </el-tooltip>
+            <svg
+              ref="simSvgRef"
+              class="sim"
+              viewBox="0 0 800 120"
+              preserveAspectRatio="none"
+            >
+              <polyline :points="polyPoints" class="path" />
+              <circle :cx="dot.x" :cy="dot.y" r="6" class="dot" />
+            </svg>
+            <div class="sim-actions">
+              <el-button type="primary" @click="startSim"
+                >开始模拟训练</el-button
+              >
+              <el-button @click="stopSim">停止</el-button>
+              <div class="hover-tip" v-if="hover">{{ hover }} 详情提示</div>
+            </div>
           </div>
           <div class="charts">
             <div class="chart-wrap">
@@ -83,6 +140,18 @@
             <el-step title="训练" description="XGBoost 100轮" />
             <el-step title="评估" description="AUC 0.87" />
           </el-steps>
+          <div class="train-sim">
+            <svg viewBox="0 0 800 100" preserveAspectRatio="none">
+              <polyline points="20,60 220,60 420,60 620,60" class="path" />
+              <circle :cx="dot.x" :cy="dot.y" r="6" class="dot" />
+            </svg>
+            <div class="sim-actions">
+              <el-button type="primary" @click="startSim"
+                >开始模拟训练</el-button
+              >
+              <el-button @click="stopSim">停止</el-button>
+            </div>
+          </div>
         </el-card>
       </div>
     </div>
@@ -96,6 +165,42 @@ import * as echarts from "echarts";
 import { getModelPressure, getModelTraining } from "@/services/api";
 
 const active = ref("alg-current");
+const hover = ref("");
+const simSvgRef = ref<SVGElement | null>(null);
+const dot = ref({ x: 20, y: 60 });
+const points = [
+  { x: 20, y: 60 },
+  { x: 220, y: 60 },
+  { x: 420, y: 60 },
+  { x: 620, y: 60 },
+];
+const polyPoints = points.map((p) => `${p.x},${p.y}`).join(" ");
+let simTimer: number | null = null;
+let seg = 0;
+let t = 0;
+const startSim = () => {
+  stopSim();
+  seg = 0;
+  t = 0;
+  simTimer = window.setInterval(() => {
+    const a = points[seg];
+    const b = points[Math.min(seg + 1, points.length - 1)];
+    t += 0.02;
+    dot.value.x = a.x + (b.x - a.x) * t;
+    dot.value.y = a.y + (b.y - a.y) * t;
+    if (t >= 1) {
+      t = 0;
+      seg += 1;
+      if (seg >= points.length - 1) {
+        stopSim();
+      }
+    }
+  }, 16);
+};
+const stopSim = () => {
+  if (simTimer) window.clearInterval(simTimer);
+  simTimer = null;
+};
 const nodes = ref([
   { id: "1", position: { x: 0, y: 0 }, label: "输入" },
   { id: "2", position: { x: 180, y: 0 }, label: "特征工程" },
@@ -238,10 +343,59 @@ onUnmounted(() => {
 .flow-wrap {
   height: 280px;
 }
+.diagram {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  padding: 12px;
+}
+.node {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.35);
+}
+.arrow {
+  color: #3b82f6;
+  font-weight: 700;
+}
+.sim {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 120px;
+  pointer-events: none;
+}
+.path {
+  fill: none;
+  stroke: rgba(59, 130, 246, 0.35);
+  stroke-width: 3;
+}
+.dot {
+  fill: #3b82f6;
+}
+.sim-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.hover-tip {
+  color: #0b1e42;
+  background: #e0f2fe;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
 .charts {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  margin-top: 12px;
+}
+.train-sim {
   margin-top: 12px;
 }
 .chart-wrap {

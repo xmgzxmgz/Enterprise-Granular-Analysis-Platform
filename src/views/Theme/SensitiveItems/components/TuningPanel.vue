@@ -11,37 +11,109 @@
         <el-menu-item index="topic">主题视角</el-menu-item>
         <el-sub-menu index="params">
           <template #title>参数调优</template>
-          <el-sub-menu index="v1"
-            ><template #title>V1</template>
-            <el-menu-item index="v1-filter">数据筛选</el-menu-item>
-            <el-menu-item index="v1-feature">特征选择</el-menu-item>
-            <el-menu-item index="v1-class">分类值调整</el-menu-item>
-            <el-menu-item index="v1-visual">可视化展示</el-menu-item>
-            <el-menu-item index="v1-tag">标签配置</el-menu-item>
+          <el-sub-menu index="v1">
+            <template #title>V1</template>
+            <div class="version-actions">
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v1-enable'"
+                >启用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v1-disable'"
+                >禁用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v1-delete'"
+                >删除</el-button
+              >
+            </div>
           </el-sub-menu>
-          <el-sub-menu index="v2"
-            ><template #title>V2</template>
-            <el-menu-item index="v2-filter">数据筛选</el-menu-item>
-            <el-menu-item index="v2-feature">特征选择</el-menu-item>
-            <el-menu-item index="v2-class">分类值调整</el-menu-item>
-            <el-menu-item index="v2-visual">可视化展示</el-menu-item>
-            <el-menu-item index="v2-tag">标签配置</el-menu-item>
+          <el-sub-menu index="v2">
+            <template #title>V2</template>
+            <div class="version-actions">
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v2-enable'"
+                >启用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v2-disable'"
+                >禁用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v2-delete'"
+                >删除</el-button
+              >
+            </div>
           </el-sub-menu>
-          <el-sub-menu index="v3"
-            ><template #title>V3</template>
-            <el-menu-item index="v3-filter">数据筛选</el-menu-item>
-            <el-menu-item index="v3-feature">特征选择</el-menu-item>
-            <el-menu-item index="v3-class">分类值调整</el-menu-item>
-            <el-menu-item index="v3-visual">可视化展示</el-menu-item>
-            <el-menu-item index="v3-tag">标签配置</el-menu-item>
+          <el-sub-menu index="v3">
+            <template #title>V3</template>
+            <div class="version-actions">
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v3-enable'"
+                >启用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v3-disable'"
+                >禁用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v3-delete'"
+                >删除</el-button
+              >
+            </div>
           </el-sub-menu>
-          <el-sub-menu index="v4"
-            ><template #title>V4</template>
-            <el-menu-item index="v4-filter">数据筛选</el-menu-item>
-            <el-menu-item index="v4-feature">特征选择</el-menu-item>
-            <el-menu-item index="v4-class">分类值调整</el-menu-item>
-            <el-menu-item index="v4-visual">可视化展示</el-menu-item>
-            <el-menu-item index="v4-tag">标签配置</el-menu-item>
+          <el-sub-menu index="v4">
+            <template #title>V4</template>
+            <div class="version-actions">
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v4-enable'"
+                >启用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v4-disable'"
+                >禁用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v4-delete'"
+                >删除</el-button
+              >
+            </div>
           </el-sub-menu>
         </el-sub-menu>
       </el-menu>
@@ -102,6 +174,27 @@
         </div>
       </div>
 
+      <div v-else-if="active.endsWith('enable')" class="card">
+        <div class="title">模型启用</div>
+        <div class="visual-wrap">
+          <div ref="enableRef" class="chart" />
+        </div>
+      </div>
+
+      <div v-else-if="active.endsWith('disable')" class="card">
+        <div class="title">模型禁用</div>
+        <div class="visual-wrap">
+          <div ref="disableRef" class="chart" />
+        </div>
+      </div>
+
+      <div v-else-if="active.endsWith('delete')" class="card">
+        <div class="title">模型删除</div>
+        <div class="visual-wrap">
+          <div ref="deleteRef" class="chart" />
+        </div>
+      </div>
+
       <div v-else-if="active.endsWith('filter')" class="card">
         <div class="title">数据筛选</div>
         <div class="toolbar">
@@ -142,6 +235,20 @@
 
       <div v-else-if="active.endsWith('feature')" class="card">
         <div class="title">特征选择</div>
+        <div class="toolbar">
+          <el-steps
+            :active="stepIndex"
+            align-center
+            finish-status="success"
+            class="steps"
+          >
+            <el-step title="数据筛选" @click="goStep(0)" />
+            <el-step title="特征选择" @click="goStep(1)" />
+            <el-step title="分类值调整" @click="goStep(2)" />
+            <el-step title="可视化展示" @click="goStep(3)" />
+            <el-step title="标签配置" @click="goStep(4)" />
+          </el-steps>
+        </div>
         <div class="feature-wrap">
           <div ref="featureRef" class="chart" />
           <div class="feature-list">
@@ -163,6 +270,20 @@
 
       <div v-else-if="active.endsWith('class')" class="card">
         <div class="title">分类值调整</div>
+        <div class="toolbar">
+          <el-steps
+            :active="stepIndex"
+            align-center
+            finish-status="success"
+            class="steps"
+          >
+            <el-step title="数据筛选" @click="goStep(0)" />
+            <el-step title="特征选择" @click="goStep(1)" />
+            <el-step title="分类值调整" @click="goStep(2)" />
+            <el-step title="可视化展示" @click="goStep(3)" />
+            <el-step title="标签配置" @click="goStep(4)" />
+          </el-steps>
+        </div>
         <div ref="classRef" class="chart" />
         <div class="footer">
           <el-checkbox-group v-model="checkedClasses">
@@ -179,6 +300,20 @@
 
       <div v-else-if="active.endsWith('visual')" class="card">
         <div class="title">可视化展示</div>
+        <div class="toolbar">
+          <el-steps
+            :active="stepIndex"
+            align-center
+            finish-status="success"
+            class="steps"
+          >
+            <el-step title="数据筛选" @click="goStep(0)" />
+            <el-step title="特征选择" @click="goStep(1)" />
+            <el-step title="分类值调整" @click="goStep(2)" />
+            <el-step title="可视化展示" @click="goStep(3)" />
+            <el-step title="标签配置" @click="goStep(4)" />
+          </el-steps>
+        </div>
         <div class="visual-wrap">
           <div ref="radarRef" class="chart" />
           <div class="table-wrap">
@@ -203,6 +338,20 @@
 
       <div v-else class="card">
         <div class="title">标签配置</div>
+        <div class="toolbar">
+          <el-steps
+            :active="stepIndex"
+            align-center
+            finish-status="success"
+            class="steps"
+          >
+            <el-step title="数据筛选" @click="goStep(0)" />
+            <el-step title="特征选择" @click="goStep(1)" />
+            <el-step title="分类值调整" @click="goStep(2)" />
+            <el-step title="可视化展示" @click="goStep(3)" />
+            <el-step title="标签配置" @click="goStep(4)" />
+          </el-steps>
+        </div>
         <el-table :data="tagRows" height="420">
           <el-table-column prop="name" label="企业" width="160" />
           <el-table-column prop="feature" label="特征" />
@@ -271,6 +420,9 @@ const goStep = (i: number) => {
 const nextStep = () => {
   if (stepIndex.value < steps.length - 1) goStep(stepIndex.value + 1);
 };
+const onDelete = () => {};
+const onEnable = () => {};
+const onDisable = () => {};
 
 const distRef = ref<HTMLDivElement | null>(null);
 const historyRef = ref<HTMLDivElement | null>(null);
@@ -278,6 +430,9 @@ const boxRef = ref<HTMLDivElement | null>(null);
 const featureRef = ref<HTMLDivElement | null>(null);
 const classRef = ref<HTMLDivElement | null>(null);
 const radarRef = ref<HTMLDivElement | null>(null);
+const enableRef = ref<HTMLDivElement | null>(null);
+const disableRef = ref<HTMLDivElement | null>(null);
+const deleteRef = ref<HTMLDivElement | null>(null);
 const topicPieRef = ref<HTMLDivElement | null>(null);
 const topicTrendRef = ref<HTMLDivElement | null>(null);
 
@@ -499,6 +654,68 @@ const renderRadar = () => {
   };
 };
 
+const renderEnable = () => {
+  if (!enableRef.value) return;
+  const chart = echarts.init(enableRef.value);
+  const option = {
+    tooltip: { trigger: "item" },
+    series: [
+      {
+        type: "pie",
+        radius: ["40%", "70%"],
+        data: [
+          { name: "已启用", value: 36 },
+          { name: "未启用", value: 14 },
+        ],
+      },
+    ],
+  };
+  chart.setOption(option);
+  window.addEventListener("resize", () => chart.resize());
+  return () => {
+    window.removeEventListener("resize", () => chart.resize());
+    chart.dispose();
+  };
+};
+
+const renderDisable = () => {
+  if (!disableRef.value) return;
+  const chart = echarts.init(disableRef.value);
+  const option = {
+    tooltip: { trigger: "axis" },
+    xAxis: { type: "category", data: ["一月", "二月", "三月", "四月"] },
+    yAxis: { type: "value" },
+    series: [
+      { type: "line", data: [4, 6, 5, 7], itemStyle: { color: "#3b82f6" } },
+    ],
+  };
+  chart.setOption(option);
+  window.addEventListener("resize", () => chart.resize());
+  return () => {
+    window.removeEventListener("resize", () => chart.resize());
+    chart.dispose();
+  };
+};
+
+const renderDelete = () => {
+  if (!deleteRef.value) return;
+  const chart = echarts.init(deleteRef.value);
+  const option = {
+    tooltip: { trigger: "axis" },
+    xAxis: { type: "category", data: ["过期", "重复", "异常", "手动"] },
+    yAxis: { type: "value" },
+    series: [
+      { type: "bar", data: [3, 5, 2, 1], itemStyle: { color: "#3b82f6" } },
+    ],
+  };
+  chart.setOption(option);
+  window.addEventListener("resize", () => chart.resize());
+  return () => {
+    window.removeEventListener("resize", () => chart.resize());
+    chart.dispose();
+  };
+};
+
 const topicRows = ref([
   { tag: "价格异常", count: 28, risk: "高" },
   { tag: "物流延迟", count: 18, risk: "中" },
@@ -599,6 +816,15 @@ const mountCharts = async () => {
     if (d1) disposers.push(d1);
     const d2 = renderTopicTrend();
     if (d2) disposers.push(d2);
+  } else if (active.value.endsWith("enable")) {
+    const d = renderEnable();
+    if (d) disposers.push(d);
+  } else if (active.value.endsWith("disable")) {
+    const d = renderDisable();
+    if (d) disposers.push(d);
+  } else if (active.value.endsWith("delete")) {
+    const d = renderDelete();
+    if (d) disposers.push(d);
   }
 };
 
@@ -659,6 +885,21 @@ onUnmounted(() => {
 }
 .mini {
   border-right: none;
+}
+.version-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+.version-actions :deep(.el-button) {
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
+}
+.version-actions :deep(.el-button.is-plain) {
+  background: linear-gradient(180deg, #93c5fd, #60a5fa);
+  color: #0b1e42;
 }
 .chart-wrap {
   display: flex;

@@ -8,7 +8,7 @@
       :unique-opened="false"
       :router="true"
     >
-      <el-menu-item index="/home">
+      <el-menu-item index="/home" class="home-btn">
         <el-icon><HomeFilled /></el-icon>
         <span>返回主页面</span>
       </el-menu-item>
@@ -124,5 +124,14 @@ const openeds = computed(() => {
 }
 .el-menu-vertical-demo .el-menu-item {
   line-height: 40px;
+}
+.home-btn {
+  background: linear-gradient(180deg, #60a5fa, #3b82f6);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.35);
+}
+.home-btn :deep(.el-icon),
+.home-btn :deep(span) {
+  color: #fff;
 }
 </style>
