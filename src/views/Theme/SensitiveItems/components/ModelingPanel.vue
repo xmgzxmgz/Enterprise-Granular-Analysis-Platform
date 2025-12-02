@@ -1,7 +1,12 @@
 <template>
   <div class="panel">
     <div class="left-mini-sidebar">
-      <el-menu :default-active="active" class="mini" :unique-opened="true">
+      <el-menu
+        :default-active="active"
+        class="mini"
+        :unique-opened="true"
+        @select="onSelect"
+      >
         <el-sub-menu index="alg">
           <template #title>算法</template>
           <el-menu-item index="alg-current">正在使用的算法</el-menu-item>
@@ -103,16 +108,21 @@
       </div>
       <div v-else-if="active === 'alg-optional'" class="box">
         <el-card>
-          <el-table :data="algOptions" style="width: 100%">
-            <el-table-column prop="name" label="名称" width="160" />
-            <el-table-column prop="type" label="类型" width="120" />
-            <el-table-column prop="desc" label="说明" />
-            <el-table-column label="操作" width="120">
-              <template #default="scope">
-                <el-button size="small" type="primary">应用</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="title">可选算法流程图</div>
+          <div class="actions" style="margin-bottom: 8px">
+            <el-radio-group
+              v-model="selectedAlg"
+              size="small"
+              @change="onAlgChange"
+            >
+              <el-radio-button label="LightGBM" />
+              <el-radio-button label="RandomForest" />
+              <el-radio-button label="SVM" />
+            </el-radio-group>
+          </div>
+          <div class="flow-wrap">
+            <VueFlow :nodes="optNodes" :edges="optEdges" fit-view />
+          </div>
         </el-card>
       </div>
       <div v-else-if="active === 'prep'" class="box">
@@ -159,12 +169,20 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { VueFlow, useVueFlow } from "@vue-flow/core";
 import * as echarts from "echarts";
 import { getModelPressure, getModelTraining } from "@/services/api";
 
+const route = useRoute();
 const active = ref("alg-current");
+const syncActive = () => {
+  const p = String(route.query.panelActive || "");
+  if (p) active.value = p;
+};
+syncActive();
+watch(() => route.query.panelActive, syncActive);
 const hover = ref("");
 const simSvgRef = ref<SVGElement | null>(null);
 const dot = ref({ x: 20, y: 60 });
@@ -201,6 +219,9 @@ const stopSim = () => {
   if (simTimer) window.clearInterval(simTimer);
   simTimer = null;
 };
+const onSelect = (index: string) => {
+  active.value = index;
+};
 const nodes = ref([
   { id: "1", position: { x: 0, y: 0 }, label: "输入" },
   { id: "2", position: { x: 180, y: 0 }, label: "特征工程" },
@@ -218,6 +239,27 @@ const algOptions = ref([
   { name: "RandomForest", type: "集成学习", desc: "鲁棒性强" },
   { name: "SVM", type: "监督学习", desc: "间隔最大化" },
 ]);
+
+const selectedAlg = ref("LightGBM");
+const optNodes = ref<any[]>([
+  { id: "o1", position: { x: 0, y: 40 }, label: "输入" },
+  { id: "o2", position: { x: 220, y: 40 }, label: "特征工程" },
+  { id: "o3", position: { x: 440, y: 40 }, label: selectedAlg.value },
+  { id: "o4", position: { x: 660, y: 40 }, label: "评估" },
+]);
+const optEdges = ref<any[]>([
+  { id: "oe1-2", source: "o1", target: "o2" },
+  { id: "oe2-3", source: "o2", target: "o3" },
+  { id: "oe3-4", source: "o3", target: "o4" },
+]);
+const onAlgChange = () => {
+  optNodes.value = [
+    { id: "o1", position: { x: 0, y: 40 }, label: "输入" },
+    { id: "o2", position: { x: 220, y: 40 }, label: "特征工程" },
+    { id: "o3", position: { x: 440, y: 40 }, label: selectedAlg.value },
+    { id: "o4", position: { x: 660, y: 40 }, label: "评估" },
+  ];
+};
 
 const prepData = ref([
   { name: "交易金额", type: "float", missing: "2.1%", desc: "单位：万元" },

@@ -16,6 +16,7 @@
         height="520"
         :row-class-name="rowClass"
         row-key="name"
+        @row-click="openDetail"
       >
         <el-table-column prop="name" label="企业" width="180" />
         <el-table-column prop="category" label="类别" width="120" />
@@ -211,6 +212,12 @@ const setTagRef = (el: any, name: string) => {
 const toggleExpand = (name: string) => {
   expanded.value[name] = !expanded.value[name];
 };
+const detailVisible = ref(false);
+const detailRow = ref<Row | null>(null);
+const openDetail = (row: Row) => {
+  detailRow.value = row;
+  detailVisible.value = true;
+};
 onMounted(async () => {
   try {
     const data = await getEnterpriseBasicInfo(cat);
@@ -365,6 +372,15 @@ const saveRowTags = async (row: Row) => {
       source: "manual",
     });
     row.manualTags = [...(editTags.value[row.name] || [])];
+    try {
+      const meta =
+        JSON.parse(localStorage.getItem("egap_tag_meta") || "{}") || {};
+      const now = Date.now();
+      for (const t of row.manualTags || []) {
+        if (!meta[t]) meta[t] = { creator: "管理员", createdAt: now };
+      }
+      localStorage.setItem("egap_tag_meta", JSON.stringify(meta));
+    } catch {}
     saveOk.value = true;
     notifySuccess(
       "标签保存成功",
@@ -456,5 +472,64 @@ const saveRowTags = async (row: Row) => {
   border-color: #ef4444;
   color: #ef4444;
   background: rgba(239, 68, 68, 0.08);
+}
+</style>
+
+<template>
+  <el-dialog
+    v-model="detailVisible"
+    title="企业信息介绍"
+    width="860px"
+    append-to-body
+  >
+    <div v-if="detailRow" class="intro-grid">
+      <div class="intro-section">
+        <div class="intro-title">基本属性</div>
+        <el-descriptions :column="4" border>
+          <el-descriptions-item label="成立日期">—</el-descriptions-item>
+          <el-descriptions-item label="注册地">—</el-descriptions-item>
+          <el-descriptions-item label="注册资本">—</el-descriptions-item>
+          <el-descriptions-item label="实收资本">—</el-descriptions-item>
+          <el-descriptions-item label="企业性质">—</el-descriptions-item>
+          <el-descriptions-item label="监管机关">—</el-descriptions-item>
+          <el-descriptions-item label="高管人员">—</el-descriptions-item>
+          <el-descriptions-item label="法人">—</el-descriptions-item>
+        </el-descriptions>
+      </div>
+      <div class="intro-section">
+        <div class="intro-title">行业属性</div>
+        <el-descriptions :column="4" border>
+          <el-descriptions-item label="生产/贸易/混合型"
+            >—</el-descriptions-item
+          >
+          <el-descriptions-item label="产业类别">{{
+            detailRow.category
+          }}</el-descriptions-item>
+          <el-descriptions-item label="专精特新">—</el-descriptions-item>
+          <el-descriptions-item label="地区">{{
+            detailRow.region
+          }}</el-descriptions-item>
+        </el-descriptions>
+      </div>
+    </div>
+    <template #footer>
+      <el-button @click="detailVisible = false">关闭</el-button>
+    </template>
+  </el-dialog>
+</template>
+
+<style scoped>
+.intro-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.intro-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.intro-title {
+  font-weight: 600;
 }
 </style>

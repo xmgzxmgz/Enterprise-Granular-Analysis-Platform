@@ -40,10 +40,10 @@
           </el-sub-menu>
           <el-sub-menu index="1-1-3">
             <template #title>
-              <span>跨境电商出口敏感指标数频分配</span>
+              <span>跨境电商出口敏感指标</span>
             </template>
             <el-menu-item
-              index="/theme-management/出口风险分类/跨境电商出口敏感指标数频分配/数频分配"
+              index="/theme-management/出口风险分类/跨境电商出口敏感指标/数频分配"
               >数频分配</el-menu-item
             >
           </el-sub-menu>

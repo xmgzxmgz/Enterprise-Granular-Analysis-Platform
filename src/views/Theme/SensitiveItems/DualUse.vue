@@ -20,12 +20,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import ModelingPanel from "./components/ModelingPanel.vue";
 import TuningPanel from "./components/TuningPanel.vue";
 import PublishPanel from "./components/PublishPanel.vue";
 
 const activeTab = ref<"modeling" | "tuning" | "publish">("modeling");
+const route = useRoute();
+const syncTab = () => {
+  const t = String(route.query.tab || "");
+  if (t === "tuning" || t === "publish" || t === "modeling") {
+    activeTab.value = t as any;
+  }
+};
+syncTab();
+watch(() => route.query.tab, syncTab);
 </script>
 
 <style scoped>

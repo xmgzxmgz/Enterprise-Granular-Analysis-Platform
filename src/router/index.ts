@@ -135,6 +135,14 @@ const routes: RouteRecordRaw[] = [
             component: () => import("@/views/Rating/Tags/Aspect.vue"),
             meta: { breadcrumb: ["企业分类评级画像", "标签管理", "切面分析"] },
           },
+          {
+            path: "标签企业列表",
+            name: "标签企业列表",
+            component: () => import("@/views/Rating/Tags/EnterpriseList.vue"),
+            meta: {
+              breadcrumb: ["企业分类评级画像", "标签管理", "标签企业列表"],
+            },
+          },
         ],
       },
     ],

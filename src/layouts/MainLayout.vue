@@ -48,6 +48,8 @@ const asideWidth = computed(() => (isMobile.value ? "64px" : "260px"));
 .app-header {
   border-bottom: 1px solid var(--border-color);
   background: var(--header-bg);
+  min-height: 96px;
+  padding: 8px 16px;
 }
 .app-main {
   padding: 0;

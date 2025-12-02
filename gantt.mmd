@@ -1,24 +1,25 @@
 gantt
-  title EGAP 项目全栈开发冲刺排期 (12.02 - 12.15)
+  title 我的 EGAP 全栈开发任务 (12.02 - 12.15)
   dateFormat YYYY-MM-DD
   axisFormat %m-%d %a
 
-  section 第一阶段 - 前端深度构建 (12.02-12.09)
-    工程初始化 & 核心主题逻辑            :done,     fe1, 2025-12-02, 1d
-    导航交互 & 入场动画                 :active,   fe2, 2025-12-03, 1d
-    核心 UI - 建模流程图 & 参数面板      :crit,     fe3, 2025-12-04, 1d
-    可视化图表 ECharts 适配             :          fe4, 2025-12-05, 1d
-    企业画像模块 & 标签体系             :          fe5, 2025-12-06, 1d
-    UI 细节打磨 & Mock 数据填充         :          fe6, 2025-12-07, 1d
-    前端性能 & 兼容性测试               :          fe7, 2025-12-08, 1d
-    里程碑 - 前端 UI 封版 (Code Freeze) :milestone,fe8, 2025-12-09, 0d
+  section 前端开发 (Frontend)
+    初始化 & 布局 (MainLayout/Hero)      :done,   fe1, 2025-12-02, 1d
+    导航 & 接口定义 (Search/Mock)        :active, fe2, 2025-12-03, 1d
+    建模面板开发 (Vue Flow)              :        fe3, 2025-12-04, 1d
+    图表开发 (ECharts)                   :        fe4, 2025-12-05, 1d
+    Mock 数据对接验证                    :        fe5, 2025-12-08, 1d
+    UI 针对真实数据微调                  :        fe6, 2025-12-10, 1d
 
-  section 第二阶段 - 后端与联调 (12.10-12.13)
-    后端环境 & H2 数据库初始化          :          be1, 2025-12-10, 1d
-    API 开发(1) - 基础业务接口          :          be2, 2025-12-11, 1d
-    API 开发(2) - 建模算法接口 (核心)   :crit,     be3, 2025-12-12, 1d
-    前后端联调 & 集成测试               :          integ1, 2025-12-13, 1d
+  section 后端开发 (Backend)
+    Spring Boot 初始化 & DB              :        be1, 2025-12-05, 1d
+    基础 API (Search/Enterprise)         :        be2, 2025-12-06, 1d
+    Python 桥接逻辑实现                  :crit,   be3, 2025-12-07, 1d
+    全链路接口联调 (Java+Py)             :crit,   integ1, 2025-12-09, 1d
+    性能优化 (Async/Exception)           :        be4, 2025-12-11, 1d
 
-  section 第三阶段 - 交付与部署 (12.14-12.15)
-    最终打包 (Build) & 文档完善         :          deploy1, 2025-12-14, 1d
-    正式交付 & 演示汇报                 :crit,     deploy2, 2025-12-15, 1d
+  section 交付 (Delivery)
+    回归测试 & 代码封版                  :        test1, 2025-12-12, 1d
+    部署演练 & 打包 (Build)              :        deploy1, 2025-12-13, 1d
+    文档 & 视频录制                      :        deploy2, 2025-12-14, 1d
+    正式交付                             :crit,   deploy3, 2025-12-15, 1d

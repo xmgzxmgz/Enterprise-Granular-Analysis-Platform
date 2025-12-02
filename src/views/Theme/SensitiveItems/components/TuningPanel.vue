@@ -22,132 +22,132 @@
               >
             </div>
           </template>
-          <el-sub-menu index="v1">
+          <el-sub-menu index="v1" v-if="versions.v1.exists">
             <template #title>V1</template>
             <div class="version-actions">
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v1-enable'"
+                @click="enableVersion('v1')"
                 >启用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v1-disable'"
+                @click="disableVersion('v1')"
                 >禁用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v1-delete'"
+                @click="deleteVersion('v1')"
                 >删除</el-button
               >
             </div>
           </el-sub-menu>
-          <el-sub-menu index="v5">
+          <el-sub-menu index="v5" v-if="versions.v5.exists">
             <template #title>V5</template>
             <div class="version-actions">
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v5-enable'"
+                @click="enableVersion('v5')"
                 >启用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v5-disable'"
+                @click="disableVersion('v5')"
                 >禁用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v5-delete'"
+                @click="deleteVersion('v5')"
                 >删除</el-button
               >
             </div>
           </el-sub-menu>
-          <el-sub-menu index="v2">
+          <el-sub-menu index="v2" v-if="versions.v2.exists">
             <template #title>V2</template>
             <div class="version-actions">
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v2-enable'"
+                @click="enableVersion('v2')"
                 >启用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v2-disable'"
+                @click="disableVersion('v2')"
                 >禁用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v2-delete'"
+                @click="deleteVersion('v2')"
                 >删除</el-button
               >
             </div>
           </el-sub-menu>
-          <el-sub-menu index="v3">
+          <el-sub-menu index="v3" v-if="versions.v3.exists">
             <template #title>V3</template>
             <div class="version-actions">
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v3-enable'"
+                @click="enableVersion('v3')"
                 >启用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v3-disable'"
+                @click="disableVersion('v3')"
                 >禁用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v3-delete'"
+                @click="deleteVersion('v3')"
                 >删除</el-button
               >
             </div>
           </el-sub-menu>
-          <el-sub-menu index="v4">
+          <el-sub-menu index="v4" v-if="versions.v4.exists">
             <template #title>V4</template>
             <div class="version-actions">
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v4-enable'"
+                @click="enableVersion('v4')"
                 >启用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v4-disable'"
+                @click="disableVersion('v4')"
                 >禁用</el-button
               >
               <el-button
                 type="primary"
                 plain
                 size="small"
-                @click="active = 'v4-delete'"
+                @click="deleteVersion('v4')"
                 >删除</el-button
               >
             </div>
@@ -259,9 +259,7 @@
           height="420"
           style="width: 100%"
           @row-click="toBasic"
-          @selection-change="onSelectionChange"
         >
-          <el-table-column type="selection" width="44" />
           <el-table-column prop="company" label="企业" sortable />
           <el-table-column prop="field" label="字段" sortable />
           <el-table-column prop="value" label="值" sortable />
@@ -481,15 +479,9 @@ import { useRouter } from "vue-router";
 import { getTagDistribution } from "@/services/api";
 
 const router = useRouter();
-const active = ref("v1-filter");
+const active = ref("dualuse");
 const onSelect = (key: string) => (active.value = key);
-const steps = ref<string[]>([
-  "v1-filter",
-  "v1-feature",
-  "v1-class",
-  "v1-visual",
-  "v1-tag",
-]);
+const steps = ref<string[]>([]);
 const stepIndex = ref(0);
 const versionOf = (k: string) => (k.includes("-") ? k.split("-")[0] : k);
 const setVersionSteps = (v: string) => {
@@ -513,15 +505,45 @@ const browseAll = (name: string) => {
     query: { focusName: name, only: "1" },
   });
 };
-const createNewVersion = () => {
-  setVersionSteps("v5");
-  active.value = "v5-filter";
+const versions = reactive<
+  Record<string, { exists: boolean; enabled: boolean }>
+>({
+  v1: { exists: true, enabled: false },
+  v2: { exists: true, enabled: false },
+  v3: { exists: true, enabled: false },
+  v4: { exists: true, enabled: false },
+  v5: { exists: true, enabled: false },
+});
+const enableVersion = (v: string) => {
+  Object.keys(versions).forEach((k) => (versions[k].enabled = k === v));
+  setVersionSteps(v);
+  active.value = `${v}-filter`;
   stepIndex.value = 0;
   reset();
 };
-const onDelete = () => {};
-const onEnable = () => {};
-const onDisable = () => {};
+const disableVersion = (v: string) => {
+  if (versions[v]) versions[v].enabled = false;
+  if (active.value.startsWith(`${v}-`)) {
+    active.value = "dualuse";
+    stepIndex.value = 0;
+  }
+};
+const deleteVersion = (v: string) => {
+  if (versions[v]) versions[v].exists = false;
+  if (active.value.startsWith(`${v}-`)) {
+    active.value = "dualuse";
+    stepIndex.value = 0;
+  }
+};
+const createNewVersion = () => {
+  const nums = Object.keys(versions)
+    .map((k) => Number(k.replace("v", "")))
+    .filter((n) => !Number.isNaN(n));
+  const next = Math.max(...nums) + 1;
+  const key = `v${next}`;
+  versions[key] = { exists: true, enabled: false } as any;
+  enableVersion(key);
+};
 
 const distRef = ref<HTMLDivElement | null>(null);
 const historyRef = ref<HTMLDivElement | null>(null);
@@ -772,6 +794,17 @@ const openFeature = (f: any) => {
   }, 0);
 };
 const onRangeChange = () => {
+  const left = curRange.value[0];
+  const right = curRange.value[1];
+  const mid = Math.floor((left + right) / 2);
+  curStats.value = {
+    name: curStats.value.name,
+    min: Math.min(curStats.value.min, left),
+    max: Math.max(curStats.value.max, right),
+    low: left,
+    mid,
+    high: right,
+  } as any;
   setTimeout(() => {
     const d = renderFeature();
     if (d) disposers.push(d);
@@ -898,6 +931,14 @@ const renderRadar = () => {
     series: [{ type: "pie", radius: ["40%", "70%"], data: data }],
   };
   chart.setOption(option);
+  chart.on("click", (p: any) => {
+    const t = String(p?.name || "").trim();
+    if (t)
+      router.push({
+        path: "/rating-profile/标签管理/标签企业列表",
+        query: { tag: t },
+      });
+  });
   window.addEventListener("resize", () => chart.resize());
   return () => {
     window.removeEventListener("resize", () => chart.resize());
@@ -1029,6 +1070,14 @@ const renderTopicPie = () => {
     ],
   };
   chart.setOption(option);
+  chart.on("click", (p: any) => {
+    const t = String(p?.name || "").trim();
+    if (t)
+      router.push({
+        path: "/rating-profile/标签管理/标签企业列表",
+        query: { tag: t },
+      });
+  });
   window.addEventListener("resize", () => chart.resize());
   return () => {
     window.removeEventListener("resize", () => chart.resize());
@@ -1050,6 +1099,14 @@ const renderTopicTrend = () => {
     ],
   };
   chart.setOption(option);
+  chart.on("click", (p: any) => {
+    const t = String(p?.seriesName || "").trim();
+    if (t)
+      router.push({
+        path: "/rating-profile/标签管理/标签企业列表",
+        query: { tag: t },
+      });
+  });
   window.addEventListener("resize", () => chart.resize());
   return () => {
     window.removeEventListener("resize", () => chart.resize());
@@ -1178,7 +1235,9 @@ onMounted(async () => {
   mountCharts();
 });
 watch(active, () => {
-  setVersionSteps(versionOf(active.value));
+  if (active.value.includes("-")) {
+    setVersionSteps(versionOf(active.value));
+  }
   if (active.value.endsWith("class")) {
     classBoxes.value = (checkedFeatures.value || []).flatMap((n) => [
       `${n}-左值`,

@@ -10,12 +10,16 @@
           >{{ c.label }}</el-breadcrumb-item
         >
       </el-breadcrumb>
-      <el-input
+      <el-autocomplete
         v-model="keyword"
         class="search-input"
         size="large"
-        placeholder="搜索页面/功能"
+        :fetch-suggestions="querySearch"
+        placeholder="搜索页面/功能（支持拼音/首字母）"
         clearable
+        trigger-on-focus
+        :debounce="80"
+        @select="onSelectSuggestion"
         @keyup.enter="onSearch"
       />
     </div>
@@ -92,17 +96,128 @@ const onCrumbClick = (index: number) => {
 const onSearch = () => {
   const k = keyword.value.trim();
   if (!k) return;
-  const mapping: Record<string, { name: string; path?: string }> = {
-    两用物项: { name: "两用物项" },
-    冷冻水产品: { name: "冷冻水产品" },
-    数频分配: { name: "数频分配" },
-    企业基本信息: { name: "企业基本信息" },
-    标签列表: { name: "标签列表" },
-    切面分析: { name: "切面分析" },
-    政策惠企: { name: "政策惠企" },
-  };
-  const key = Object.keys(mapping).find((x) => x.includes(k) || k.includes(x));
-  if (key) router.push({ name: mapping[key].name });
+  const rec = fuzzyMatch(k);
+  if (rec) {
+    if (rec.route?.name || rec.route?.path) router.push(rec.route as any);
+    else router.push({ name: rec.name });
+  }
+};
+
+type DictItem = {
+  name: string;
+  aliases: string[];
+  route?: { name?: string; path?: string; query?: Record<string, any> };
+};
+const dictionary: DictItem[] = [
+  {
+    name: "两用物项",
+    aliases: ["lywx", "lianyongwuxiang", "liangyongwuxiang"],
+    route: { name: "两用物项" },
+  },
+  {
+    name: "冷冻水产品",
+    aliases: ["ldscp", "lengdongshuichanpin"],
+    route: { name: "冷冻水产品" },
+  },
+  {
+    name: "数频分配",
+    aliases: ["spfp", "shupinfenpei"],
+    route: { name: "数频分配" },
+  },
+  {
+    name: "企业基本信息",
+    aliases: ["qybxxx", "qiyebasexinxi", "qiyebijiaoxinxi", "qiyebasics"],
+    route: { name: "企业基本信息" },
+  },
+  {
+    name: "标签列表",
+    aliases: ["bqlb", "biaoqianliebiao"],
+    route: { name: "标签列表" },
+  },
+  {
+    name: "切面分析",
+    aliases: ["qmfx", "qiemianfenxi"],
+    route: { name: "切面分析" },
+  },
+  {
+    name: "政策惠企",
+    aliases: ["zchk", "zhengcehuiqi"],
+    route: { name: "政策惠企" },
+  },
+  // 建模面板子功能
+  {
+    name: "正在使用的算法",
+    aliases: ["zzyssdsl", "xgboost", "current-alg"],
+    route: {
+      name: "两用物项",
+      query: { tab: "modeling", panelActive: "alg-current" },
+    },
+  },
+  {
+    name: "可选算法",
+    aliases: ["kxsfa", "optional-alg", "lightgbm"],
+    route: {
+      name: "两用物项",
+      query: { tab: "modeling", panelActive: "alg-optional" },
+    },
+  },
+  {
+    name: "前期数据准备",
+    aliases: ["qqsjzb", "prep"],
+    route: {
+      name: "两用物项",
+      query: { tab: "modeling", panelActive: "prep" },
+    },
+  },
+  {
+    name: "模型训练过程",
+    aliases: ["mxxlgc", "train"],
+    route: {
+      name: "两用物项",
+      query: { tab: "modeling", panelActive: "train" },
+    },
+  },
+  // 调优面板概览
+  {
+    name: "参数调优",
+    aliases: ["csty", "tuning", "params"],
+    route: { name: "两用物项", query: { tab: "tuning" } },
+  },
+];
+
+const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+const fuzzyMatch = (k: string): DictItem | null => {
+  const q = normalize(k);
+  return (
+    dictionary.find(
+      (d) =>
+        normalize(d.name).includes(q) ||
+        q.includes(normalize(d.name)) ||
+        d.aliases.some(
+          (a) => normalize(a).includes(q) || q.includes(normalize(a))
+        )
+    ) || null
+  );
+};
+
+const querySearch = (q: string, cb: (list: { value: string }[]) => void) => {
+  const qn = normalize(q);
+  const rec = dictionary.filter(
+    (d) =>
+      normalize(d.name).includes(qn) ||
+      qn.includes(normalize(d.name)) ||
+      d.aliases.some(
+        (a) => normalize(a).includes(qn) || qn.includes(normalize(a))
+      )
+  );
+  cb(rec.map((d) => ({ value: d.name })));
+};
+const onSelectSuggestion = (item: { value: string }) => {
+  const rec = dictionary.find((d) => d.name === item.value);
+  if (rec) {
+    if (rec.route?.name || rec.route?.path) router.push(rec.route as any);
+    else router.push({ name: rec.name });
+  }
 };
 
 const formatTime = (t: number) => {
