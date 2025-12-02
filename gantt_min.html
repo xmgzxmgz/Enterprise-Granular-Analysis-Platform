@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Mermaid Gantt Minimal</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({ startOnLoad: true, theme: "default" });
+    </script>
+  </head>
+  <body>
+    <script type="text/plain" class="mermaid">
+gantt
+  title 测试甘特
+  dateFormat YYYY-MM-DD
+
+  section 阶段一
+    任务一 : t1, 2025-12-02, 1d
+    任务二 : t2, 2025-12-03, 1d
+    任务三 :done, t3, 2025-12-04, 2d
+    任务四 :crit, t4, 2025-12-06, 1d
+    任务五 :active, t5, 2025-12-07, 1d
+    </script>
+  </body>
+</html>

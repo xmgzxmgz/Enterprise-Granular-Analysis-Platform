@@ -255,7 +255,11 @@ onMounted(async () => {
     "黑名单接触",
   ];
   tagOptions.value = Array.from(new Set([...tagOptions.value, ...defaults]));
-  if (rows.value.length < 50) {
+  const only = route.query.only as string | undefined;
+  if (focusName && only === "1") {
+    rows.value = rows.value.filter((r) => r.name === focusName);
+  }
+  if (rows.value.length < 50 && !(focusName && only === "1")) {
     const need = 50 - rows.value.length;
     const cats = [
       "制造业",

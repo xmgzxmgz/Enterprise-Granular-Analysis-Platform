@@ -10,7 +10,18 @@
         <el-menu-item index="dualuse">两用物项</el-menu-item>
         <el-menu-item index="topic">主题视角</el-menu-item>
         <el-sub-menu index="params">
-          <template #title>参数调优</template>
+          <template #title>
+            <div class="params-title">
+              <span>参数调优</span>
+              <el-button
+                size="small"
+                type="primary"
+                plain
+                @click="createNewVersion"
+                >新建项目</el-button
+              >
+            </div>
+          </template>
           <el-sub-menu index="v1">
             <template #title>V1</template>
             <div class="version-actions">
@@ -33,6 +44,32 @@
                 plain
                 size="small"
                 @click="active = 'v1-delete'"
+                >删除</el-button
+              >
+            </div>
+          </el-sub-menu>
+          <el-sub-menu index="v5">
+            <template #title>V5</template>
+            <div class="version-actions">
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v5-enable'"
+                >启用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v5-disable'"
+                >禁用</el-button
+              >
+              <el-button
+                type="primary"
+                plain
+                size="small"
+                @click="active = 'v5-delete'"
                 >删除</el-button
               >
             </div>
@@ -170,7 +207,8 @@
         </div>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
-          <el-button type="primary">下一步</el-button>
+          <el-button @click="prevStep">上一步</el-button>
+          <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
@@ -221,7 +259,9 @@
           height="420"
           style="width: 100%"
           @row-click="toBasic"
+          @selection-change="onSelectionChange"
         >
+          <el-table-column type="selection" width="44" />
           <el-table-column prop="company" label="企业" sortable />
           <el-table-column prop="field" label="字段" sortable />
           <el-table-column prop="value" label="值" sortable />
@@ -229,6 +269,7 @@
         </el-table>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
+          <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
@@ -250,21 +291,50 @@
           </el-steps>
         </div>
         <div class="feature-wrap">
-          <div ref="featureRef" class="chart" />
+          <div class="importance-chart">
+            <div ref="importanceRef" class="chart" />
+          </div>
           <div class="feature-list">
             <el-checkbox-group v-model="checkedFeatures">
-              <el-checkbox
+              <div
                 v-for="f in features"
                 :key="f.name"
-                :label="f.name"
-                >{{ f.name }}</el-checkbox
+                class="feature-item"
+                @click="openFeature(f)"
               >
+                <span class="fname">{{ f.name }}</span>
+                <el-checkbox :label="f.name" />
+              </div>
             </el-checkbox-group>
+          </div>
+        </div>
+        <div class="feature-detail">
+          <div ref="featureRef" class="chart" />
+          <div class="detail-values">
+            <el-descriptions :column="3" border>
+              <el-descriptions-item label="左值">{{
+                curStats.low
+              }}</el-descriptions-item>
+              <el-descriptions-item label="中值">{{
+                curStats.mid
+              }}</el-descriptions-item>
+              <el-descriptions-item label="右值">{{
+                curStats.high
+              }}</el-descriptions-item>
+            </el-descriptions>
+            <el-slider
+              v-model="curRange"
+              range
+              :min="curStats.min"
+              :max="curStats.max"
+              @change="onRangeChange"
+            />
           </div>
         </div>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
-          <el-button type="primary">下一步</el-button>
+          <el-button @click="prevStep">上一步</el-button>
+          <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
@@ -286,15 +356,13 @@
         </div>
         <div ref="classRef" class="chart" />
         <div class="footer">
-          <el-checkbox-group v-model="checkedClasses">
-            <el-checkbox label="低" />
-            <el-checkbox label="中" />
-            <el-checkbox label="高" />
-            <el-checkbox label="极高" />
+          <el-checkbox-group v-model="checkedClassBoxes">
+            <el-checkbox v-for="b in classBoxes" :key="b" :label="b" />
           </el-checkbox-group>
           <div class="spacer" />
           <el-button @click="reset">重置</el-button>
-          <el-button type="primary">下一步</el-button>
+          <el-button @click="prevStep">上一步</el-button>
+          <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
@@ -323,16 +391,20 @@
               <el-table-column prop="rating" label="评级" width="120" />
               <el-table-column prop="score" label="评分" width="120" />
               <el-table-column label="操作" width="140">
-                <template #default>
-                  <el-button size="small">全数据浏览</el-button>
+                <template #default="{ row }">
+                  <el-button size="small" @click="browseAll(row.name)"
+                    >全数据浏览</el-button
+                  >
                 </template>
               </el-table-column>
             </el-table>
           </div>
         </div>
+        <div class="chart-wrap"><div ref="compareRef" class="chart" /></div>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
-          <el-button type="primary">下一步</el-button>
+          <el-button @click="prevStep">上一步</el-button>
+          <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
@@ -411,14 +483,41 @@ import { getTagDistribution } from "@/services/api";
 const router = useRouter();
 const active = ref("v1-filter");
 const onSelect = (key: string) => (active.value = key);
-const steps = ["v1-filter", "v1-feature", "v1-class", "v1-visual", "v1-tag"];
+const steps = ref<string[]>([
+  "v1-filter",
+  "v1-feature",
+  "v1-class",
+  "v1-visual",
+  "v1-tag",
+]);
 const stepIndex = ref(0);
+const versionOf = (k: string) => (k.includes("-") ? k.split("-")[0] : k);
+const setVersionSteps = (v: string) => {
+  steps.value = ["filter", "feature", "class", "visual", "tag"].map(
+    (t) => `${v}-${t}`
+  );
+};
 const goStep = (i: number) => {
   stepIndex.value = i;
-  active.value = steps[i];
+  active.value = steps.value[i];
 };
 const nextStep = () => {
-  if (stepIndex.value < steps.length - 1) goStep(stepIndex.value + 1);
+  if (stepIndex.value < steps.value.length - 1) goStep(stepIndex.value + 1);
+};
+const prevStep = () => {
+  if (stepIndex.value > 0) goStep(stepIndex.value - 1);
+};
+const browseAll = (name: string) => {
+  router.push({
+    path: "/rating-profile/基本信息",
+    query: { focusName: name, only: "1" },
+  });
+};
+const createNewVersion = () => {
+  setVersionSteps("v5");
+  active.value = "v5-filter";
+  stepIndex.value = 0;
+  reset();
 };
 const onDelete = () => {};
 const onEnable = () => {};
@@ -428,8 +527,10 @@ const distRef = ref<HTMLDivElement | null>(null);
 const historyRef = ref<HTMLDivElement | null>(null);
 const boxRef = ref<HTMLDivElement | null>(null);
 const featureRef = ref<HTMLDivElement | null>(null);
+const importanceRef = ref<HTMLDivElement | null>(null);
 const classRef = ref<HTMLDivElement | null>(null);
 const radarRef = ref<HTMLDivElement | null>(null);
+const compareRef = ref<HTMLDivElement | null>(null);
 const enableRef = ref<HTMLDivElement | null>(null);
 const disableRef = ref<HTMLDivElement | null>(null);
 const deleteRef = ref<HTMLDivElement | null>(null);
@@ -558,6 +659,11 @@ const rows = reactive<
   { company: string; field: string; value: any; date: string }[]
 >([]);
 const filteredRows = ref(rows);
+const selectedEnterprises = ref<string[]>([]);
+const onSelectionChange = (sel: any[]) => {
+  selectedEnterprises.value = Array.from(new Set(sel.map((r) => r.company)));
+  generateAggStats();
+};
 const toBasic = (row: any) => {
   const name = row?.company;
   if (!name) return;
@@ -568,27 +674,146 @@ watch(filterKeyword, () => {
   filteredRows.value = rows.filter((r) => JSON.stringify(r).includes(k));
 });
 
-const features = reactive([
-  { name: "交易金额", volume: 1200 },
-  { name: "物流时长", volume: 980 },
-  { name: "出口地区", volume: 760 },
-  { name: "商品类别", volume: 540 },
+const features = reactive(
+  Array.from({ length: 20 }, (_, i) => {
+    const names = [
+      "出口量",
+      "出口频次",
+      "交易金额",
+      "物流时长",
+      "商品类别",
+      "目的地区",
+      "退货率",
+      "异常记录次数",
+      "合规事件数",
+      "供应商数量",
+      "买家数量",
+      "订单均值",
+      "发票均值",
+      "清关耗时",
+      "申报差异",
+      "运费均值",
+      "温控偏差",
+      "破损率",
+      "库存周转",
+      "历史违规",
+    ];
+    const name =
+      names[i % names.length] +
+      (i >= names.length ? `-${i - names.length + 1}` : "");
+    const min = Math.floor(10 + Math.random() * 50);
+    const max = min + Math.floor(50 + Math.random() * 200);
+    const low = Math.floor(min + (max - min) * 0.25);
+    const mid = Math.floor(min + (max - min) * 0.5);
+    const high = Math.floor(min + (max - min) * 0.8);
+    return { name, min, max, low, mid, high };
+  })
+);
+const checkedFeatures = ref<string[]>([]);
+const activeFeature = ref<string>(features[0].name);
+const curStats = ref(features[0]);
+const curRange = ref<[number, number]>([
+  curStats.value.min,
+  curStats.value.max,
 ]);
-const checkedFeatures = ref<string[]>(features.map((f) => f.name));
+const featureAggStats = ref<
+  Record<
+    string,
+    { min: number; max: number; low: number; mid: number; high: number }
+  >
+>({});
+const hash = (s: string) =>
+  s.split("").reduce((a, c) => (a * 131 + c.charCodeAt(0)) % 9973, 7);
+const generateAggStats = () => {
+  const map: Record<
+    string,
+    { min: number; max: number; low: number; mid: number; high: number }
+  > = {};
+  for (const f of features) {
+    let mins: number[] = [];
+    let maxs: number[] = [];
+    let meds: number[] = [];
+    const names = selectedEnterprises.value.length
+      ? selectedEnterprises.value
+      : ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"];
+    for (const n of names) {
+      const seed = hash(n + f.name);
+      const min = f.min + (seed % 20);
+      const max = f.max - (seed % 15);
+      const mid = Math.floor((min + max) / 2);
+      mins.push(min);
+      maxs.push(max);
+      meds.push(mid);
+    }
+    const min = Math.min(...mins);
+    const max = Math.max(...maxs);
+    const mid = Math.floor(meds.reduce((a, b) => a + b, 0) / meds.length);
+    const low = Math.floor(min + (mid - min) * 0.5);
+    const high = Math.floor(mid + (max - mid) * 0.6);
+    map[f.name] = { min, max, low, mid, high };
+  }
+  featureAggStats.value = map;
+};
+const openFeature = (f: any) => {
+  activeFeature.value = f.name;
+  const s = featureAggStats.value[f.name] || f;
+  curStats.value = {
+    name: f.name,
+    min: s.min,
+    max: s.max,
+    low: s.low,
+    mid: s.mid,
+    high: s.high,
+  } as any;
+  curRange.value = [s.min, s.max];
+  setTimeout(() => {
+    const d = renderFeature();
+    if (d) disposers.push(d);
+  }, 0);
+};
+const onRangeChange = () => {
+  setTimeout(() => {
+    const d = renderFeature();
+    if (d) disposers.push(d);
+  }, 0);
+};
 const renderFeature = () => {
   if (!featureRef.value) return;
   const chart = echarts.init(featureRef.value);
+  const s = curStats.value;
+  const bins = 20;
+  const step = (s.max - s.min) / bins;
+  const xs = Array.from({ length: bins }, (_, i) =>
+    Math.round(s.min + step * i)
+  );
+  const data = xs.map((x) => {
+    const center = s.mid;
+    const dist = Math.abs(x - center) / (s.max - s.min);
+    return Math.max(2, Math.round(20 * Math.exp(-6 * dist)));
+  });
+  const inRange = (x: number) =>
+    x >= curRange.value[0] && x <= curRange.value[1];
   const option = {
-    grid: { left: 80, right: 20, top: 30, bottom: 20 },
-    xAxis: { type: "value" },
-    yAxis: { type: "category", data: features.map((f) => f.name) },
+    title: { text: `${activeFeature.value} 分布与筛选`, left: "center" },
+    grid: { left: 40, right: 20, top: 50, bottom: 40 },
+    xAxis: { type: "category", data: xs },
+    yAxis: { type: "value" },
     series: [
       {
         type: "bar",
-        data: features.map((f) => f.volume),
-        itemStyle: { color: "#3b82f6" },
+        data: data,
+        itemStyle: {
+          color: (p: any) => (inRange(xs[p.dataIndex]) ? "#3b82f6" : "#93c5fd"),
+        },
+      },
+      {
+        type: "scatter",
+        data: [s.low, s.mid, s.high].map((v) => [v, Math.max(...data) * 0.9]),
+        symbolSize: 10,
+        itemStyle: { color: "#1d4ed8" },
       },
     ],
+    tooltip: { trigger: "axis" },
   };
   chart.setOption(option);
   const onResize = () => chart.resize();
@@ -599,20 +824,56 @@ const renderFeature = () => {
   };
 };
 
-const checkedClasses = ref(["低", "中", "高", "极高"]);
+const renderImportance = () => {
+  if (!importanceRef.value) return;
+  const chart = echarts.init(importanceRef.value);
+  const cats = features.map((f) => f.name);
+  const data = features.map((f, i) =>
+    Number((0.15 * Math.exp(-i / 6)).toFixed(3))
+  );
+  const option = {
+    title: { text: "SWAP Feature Importance (Top 20 Feat)", left: "center" },
+    grid: { left: 180, right: 20, top: 40, bottom: 30 },
+    xAxis: { type: "value" },
+    yAxis: { type: "category", data: cats },
+    series: [{ type: "bar", data, itemStyle: { color: "#3b82f6" } }],
+    tooltip: { trigger: "axis" },
+  };
+  chart.setOption(option);
+  const onResize = () => chart.resize();
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
+    chart.dispose();
+  };
+};
+
+const classBoxes = ref<string[]>([]);
+const checkedClassBoxes = ref<string[]>([]);
 const renderClass = () => {
   if (!classRef.value) return;
   const chart = echarts.init(classRef.value);
+  const ks = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const base = [0.095, 0.072, 0.063, 0.062, 0.058, 0.057, 0.061, 0.053, 0.05];
+  const factor = 1 + Math.min(checkedClassBoxes.value.length, 60) * 0.003;
+  const silhouette = base.map((v) => Number((v * factor).toFixed(3)));
   const option = {
-    xAxis: { type: "category", data: ["一月", "二月", "三月", "四月"] },
-    yAxis: { type: "value" },
-    legend: { data: ["低", "中", "高", "极高"] },
+    title: { text: "Silhouette Scores vs. Number of Clusters", left: "center" },
+    grid: { left: 50, right: 20, top: 50, bottom: 40 },
+    xAxis: { type: "category", name: "Number of Clusters (k)", data: ks },
+    yAxis: { type: "value", name: "Silhouette Score", min: 0, max: 0.12 },
     series: [
-      { name: "低", type: "line", data: [12, 18, 16, 20] },
-      { name: "中", type: "line", data: [22, 28, 26, 30] },
-      { name: "高", type: "line", data: [32, 38, 36, 40] },
-      { name: "极高", type: "line", data: [42, 48, 50, 52] },
+      {
+        name: "Silhouette",
+        type: "line",
+        data: silhouette,
+        symbol: "circle",
+        symbolSize: 8,
+        lineStyle: { width: 3, color: "#3b82f6" },
+        itemStyle: { color: "#3b82f6" },
+      },
     ],
+    tooltip: { trigger: "axis" },
   };
   chart.setOption(option);
   const onResize = () => chart.resize();
@@ -626,25 +887,15 @@ const renderClass = () => {
 const renderRadar = () => {
   if (!radarRef.value) return;
   const chart = echarts.init(radarRef.value);
+  const names = selectedEnterprises.value.length
+    ? selectedEnterprises.value
+    : ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"];
+  const classes = ["低", "中", "高", "极高"];
+  const data = classes.map((c, i) => ({ name: c, value: (i + 1) * 10 }));
   const option = {
-    radar: {
-      indicator: [
-        { name: "价格", max: 100 },
-        { name: "物流", max: 100 },
-        { name: "属地", max: 100 },
-        { name: "合规", max: 100 },
-        { name: "频率", max: 100 },
-      ],
-    },
-    series: [
-      {
-        type: "radar",
-        data: [
-          { value: [78, 62, 80, 70, 66], name: "企业A" },
-          { value: [65, 70, 60, 75, 72], name: "企业B" },
-        ],
-      },
-    ],
+    title: { text: "分类分布（饼图）", left: "center" },
+    tooltip: { trigger: "item" },
+    series: [{ type: "pie", radius: ["40%", "70%"], data: data }],
   };
   chart.setOption(option);
   window.addEventListener("resize", () => chart.resize());
@@ -716,6 +967,45 @@ const renderDelete = () => {
   };
 };
 
+const selectionSummary = () => {
+  const names = new Set(checkedFeatures.value);
+  const selected = features.filter((f) => names.has(f.name));
+  const count = selected.length || 1;
+  const widths = selected.map(
+    (f) => (curRange.value[1] - curRange.value[0]) / (f.max - f.min)
+  );
+  const avgWidth = widths.length
+    ? widths.reduce((a, b) => a + b, 0) / widths.length
+    : 1;
+  return { count, avgWidth };
+};
+
+const renderCompare = () => {
+  if (!compareRef.value) return;
+  const chart = echarts.init(compareRef.value);
+  const { count, avgWidth } = selectionSummary();
+  const names = selectedEnterprises.value.length
+    ? selectedEnterprises.value
+    : ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"];
+  const base = 60;
+  const scores = names.map((_, i) =>
+    Math.round(base + 5 * (i + 1) + 8 * count * (1 - avgWidth))
+  );
+  const option = {
+    title: { text: "企业对比（评分）", left: "center" },
+    xAxis: { type: "category", data: names },
+    yAxis: { type: "value" },
+    series: [{ type: "bar", data: scores, itemStyle: { color: "#3b82f6" } }],
+    tooltip: { trigger: "axis" },
+  };
+  chart.setOption(option);
+  window.addEventListener("resize", () => chart.resize());
+  return () => {
+    window.removeEventListener("resize", () => chart.resize());
+    chart.dispose();
+  };
+};
+
 const topicRows = ref([
   { tag: "价格异常", count: 28, risk: "高" },
   { tag: "物流延迟", count: 18, risk: "中" },
@@ -767,25 +1057,45 @@ const renderTopicTrend = () => {
   };
 };
 
-const companyScores = ref([
-  { name: "企业A", class: "两用物项", rating: "A级", score: 86 },
-  { name: "企业B", class: "两用物项", rating: "B级", score: 78 },
-]);
+const companyScores = ref(
+  ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"].map((n, i) => ({
+    name: n,
+    class: "两用物项",
+    rating: ["A级", "B级", "A-级"][i % 3],
+    score: 80 + i * 3,
+  }))
+);
 
-const tagRows = ref([
-  { name: "企业A", feature: "价格指纹", slice: "北京", expert: "" },
-  { name: "企业B", feature: "物流指纹", slice: "上海", expert: "" },
-  { name: "企业C", feature: "属地指纹", slice: "深圳", expert: "" },
-]);
+const tagRows = ref<
+  { name: string; feature: string; slice: string; expert?: string }[]
+>([]);
+const refreshTagRows = () => {
+  const names = selectedEnterprises.value.length
+    ? selectedEnterprises.value
+    : ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"];
+  const feats = checkedFeatures.value.length
+    ? checkedFeatures.value.slice(0, 3)
+    : ["价格指纹", "物流指纹", "属地指纹"];
+  tagRows.value = names.map((n, i) => ({
+    name: n,
+    feature: feats[i % feats.length],
+    slice: ["北京", "上海", "深圳", "天津"][i % 4],
+  }));
+};
 const finished = ref(false);
 const updatedScores = ref([
-  { name: "企业A", ratingDetail: "两用物品价格指纹风险高", score: 86 },
-  { name: "企业B", ratingDetail: "两用物品物流指纹风险低", score: 78 },
+  { name: "华北电力集团", ratingDetail: "两用物品价格指纹风险高", score: 88 },
+  { name: "北京首钢集团", ratingDetail: "两用物品物流指纹风险低", score: 82 },
 ]);
 const reset = () => {
   filterKeyword.value = "";
   checkedFeatures.value = features.map((f) => f.name);
-  checkedClasses.value = ["低", "中", "高", "极高"];
+  classBoxes.value = checkedFeatures.value.flatMap((n) => [
+    `${n}-左值`,
+    `${n}-中值`,
+    `${n}-右值`,
+  ]);
+  checkedClassBoxes.value = [...classBoxes.value];
 };
 const finish = () => {
   finished.value = true;
@@ -803,14 +1113,18 @@ const mountCharts = async () => {
     const d3 = renderBox();
     if (d3) disposers.push(d3);
   } else if (active.value.endsWith("feature")) {
-    const d = renderFeature();
-    if (d) disposers.push(d);
+    const d1 = renderImportance();
+    if (d1) disposers.push(d1);
+    const d2 = renderFeature();
+    if (d2) disposers.push(d2);
   } else if (active.value.endsWith("class")) {
     const d = renderClass();
     if (d) disposers.push(d);
   } else if (active.value.endsWith("visual")) {
     const d = renderRadar();
     if (d) disposers.push(d);
+    const c = renderCompare();
+    if (c) disposers.push(c);
   } else if (active.value === "topic") {
     const d1 = renderTopicPie();
     if (d1) disposers.push(d1);
@@ -864,7 +1178,22 @@ onMounted(async () => {
   mountCharts();
 });
 watch(active, () => {
+  setVersionSteps(versionOf(active.value));
+  if (active.value.endsWith("class")) {
+    classBoxes.value = (checkedFeatures.value || []).flatMap((n) => [
+      `${n}-左值`,
+      `${n}-中值`,
+      `${n}-右值`,
+    ]);
+    checkedClassBoxes.value = [...classBoxes.value];
+  }
+  if (active.value.endsWith("tag")) {
+    refreshTagRows();
+  }
   setTimeout(mountCharts, 0);
+});
+watch(checkedClassBoxes, () => {
+  if (active.value.endsWith("class")) setTimeout(mountCharts, 0);
 });
 watch(distChartType, () => {
   if (active.value === "dualuse") setTimeout(mountCharts, 0);
@@ -900,6 +1229,12 @@ onUnmounted(() => {
 .version-actions :deep(.el-button.is-plain) {
   background: linear-gradient(180deg, #93c5fd, #60a5fa);
   color: #0b1e42;
+}
+.params-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 .chart-wrap {
   display: flex;
@@ -948,16 +1283,48 @@ onUnmounted(() => {
   margin-top: 12px;
 }
 .feature-wrap {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 280px;
   gap: 12px;
 }
 .feature-list {
-  width: 220px;
-  height: 260px;
+  width: 100%;
+  height: 320px;
   overflow: auto;
   border: 1px dashed var(--border-color);
   border-radius: 8px;
   padding: 8px;
+}
+.importance-chart {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+.feature-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+}
+.feature-item:hover {
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.fname {
+  color: var(--text-primary);
+}
+.feature-detail {
+  display: grid;
+  grid-template-rows: 260px auto;
+  gap: 8px;
+  margin-top: 12px;
+}
+.detail-values {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 .visual-wrap {
   display: flex;
