@@ -49,3 +49,11 @@ export async function updateEnterpriseTags(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export async function getPolicies() {
+  return request("/policies");
+}
+
+export async function getModelPrepData() {
+  return request("/modeling/prep");
+}

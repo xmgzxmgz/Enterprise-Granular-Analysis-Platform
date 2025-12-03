@@ -19,7 +19,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: "",
-        component: () => import("@/views/Theme/Root.vue"),
+        component: () => import("@/views/Common/RootNavigator.vue"),
+        props: { basePath: "/theme-management", title: "分类主题管理" },
       },
       {
         path: "export-risk",
@@ -121,7 +122,8 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: "",
-        component: () => import("@/views/Rating/Root.vue"),
+        component: () => import("@/views/Common/RootNavigator.vue"),
+        props: { basePath: "/rating-profile", title: "企业分类评级画像" },
       },
       {
         path: "basic-info",

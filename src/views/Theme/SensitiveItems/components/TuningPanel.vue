@@ -259,12 +259,49 @@
           height="420"
           style="width: 100%"
           @row-click="toBasic"
+          @selection-change="onSelectionChange"
         >
-          <el-table-column prop="company" label="企业" sortable />
-          <el-table-column prop="field" label="字段" sortable />
-          <el-table-column prop="value" label="值" sortable />
-          <el-table-column prop="date" label="日期" sortable />
+          <el-table-column type="selection" width="48" />
+          <el-table-column
+            v-for="col in visibleColumns"
+            :key="col.key"
+            :prop="col.key"
+            :label="col.label"
+            sortable
+          />
+          <el-table-column fixed="right" width="160">
+            <template #header>
+              <el-button size="small" type="primary" @click="openFieldFilter"
+                >字段筛选</el-button
+              >
+            </template>
+          </el-table-column>
         </el-table>
+        <el-dialog
+          v-model="fieldFilterVisible"
+          title="字段筛选"
+          width="560px"
+          align-center
+        >
+          <div class="field-grid">
+            <el-checkbox-group v-model="checkedColumns">
+              <el-checkbox
+                v-for="c in allColumns"
+                :key="c.key"
+                :label="c.key"
+                >{{ c.label }}</el-checkbox
+              >
+            </el-checkbox-group>
+          </div>
+          <template #footer>
+            <div class="field-actions">
+              <el-button @click="resetColumns">重置</el-button>
+              <el-button @click="selectAllColumns">全选</el-button>
+              <el-button @click="invertColumns">反选</el-button>
+              <el-button type="primary" @click="confirmColumns">确认</el-button>
+            </div>
+          </template>
+        </el-dialog>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
@@ -473,7 +510,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { onMounted, onUnmounted, reactive, ref, watch, computed } from "vue";
 import * as echarts from "echarts";
 import { useRouter } from "vue-router";
 import { getTagDistribution } from "@/services/api";
@@ -500,10 +537,7 @@ const prevStep = () => {
   if (stepIndex.value > 0) goStep(stepIndex.value - 1);
 };
 const browseAll = (name: string) => {
-  router.push({
-    path: "/rating-profile/基本信息",
-    query: { focusName: name, only: "1" },
-  });
+  router.push({ name: "企业基本信息", query: { focusName: name, only: "1" } });
 };
 const versions = reactive<
   Record<string, { exists: boolean; enabled: boolean }>
@@ -695,6 +729,43 @@ watch(filterKeyword, () => {
   const k = filterKeyword.value.trim();
   filteredRows.value = rows.filter((r) => JSON.stringify(r).includes(k));
 });
+
+// 字段列管理与筛选
+type ColumnDef = { key: string; label: string };
+const baseColumns: ColumnDef[] = [
+  { key: "company", label: "企业" },
+  { key: "field", label: "字段" },
+  { key: "value", label: "值" },
+  { key: "date", label: "日期" },
+];
+const allColumns = computed<ColumnDef[]>(() => {
+  const keys = new Set(baseColumns.map((c) => c.key));
+  for (const r of filteredRows.value) {
+    Object.keys(r).forEach((k) => keys.add(k));
+  }
+  return Array.from(keys).map((k) => ({
+    key: k,
+    label: baseColumns.find((b) => b.key === k)?.label || k,
+  }));
+});
+const checkedColumns = ref<string[]>(baseColumns.map((c: ColumnDef) => c.key));
+const visibleColumns = computed(() =>
+  allColumns.value.filter((c: ColumnDef) =>
+    checkedColumns.value.includes(c.key)
+  )
+);
+const fieldFilterVisible = ref(false);
+const openFieldFilter = () => (fieldFilterVisible.value = true);
+const resetColumns = () =>
+  (checkedColumns.value = baseColumns.map((c) => c.key));
+const selectAllColumns = () =>
+  (checkedColumns.value = allColumns.value.map((c: ColumnDef) => c.key));
+const invertColumns = () => {
+  const all = new Set<string>(allColumns.value.map((c: ColumnDef) => c.key));
+  const cur = new Set<string>(checkedColumns.value);
+  checkedColumns.value = Array.from(all).filter((k: string) => !cur.has(k));
+};
+const confirmColumns = () => (fieldFilterVisible.value = false);
 
 const features = reactive(
   Array.from({ length: 20 }, (_, i) => {

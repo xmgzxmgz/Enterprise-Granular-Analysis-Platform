@@ -12,13 +12,23 @@
           v-model="tag"
           placeholder="选择标签"
           style="max-width: 200px"
+          clearable
         >
-          <el-option label="税收" value="税收" />
-          <el-option label="通关" value="通关" />
-          <el-option label="补贴" value="补贴" />
+          <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
         </el-select>
       </div>
-      <el-table :data="filtered" height="420">
+      <el-alert
+        v-if="error"
+        type="error"
+        :title="'后端不可联通或错误'"
+        show-icon
+        closable
+      />
+      <el-empty
+        v-else-if="!filtered.length"
+        description="后端无数据或未匹配到结果"
+      />
+      <el-table v-else :data="filtered" height="420">
         <el-table-column prop="name" label="政策名称" width="240" />
         <el-table-column prop="dept" label="部门" width="160" />
         <el-table-column prop="tag" label="标签" width="120" />
@@ -29,35 +39,42 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { getPolicies } from "@/services/api";
+
+type PolicyRow = { name: string; dept?: string; tag?: string; desc?: string };
+
 const keyword = ref("");
 const tag = ref<string | undefined>(undefined);
-const rows = ref([
-  {
-    name: "出口退税优惠",
-    dept: "税务局",
-    tag: "税收",
-    desc: "针对外贸企业的退税政策",
-  },
-  {
-    name: "快速通关试点",
-    dept: "海关",
-    tag: "通关",
-    desc: "压缩通关时间，提高效率",
-  },
-  {
-    name: "外贸数字化补贴",
-    dept: "发改委",
-    tag: "补贴",
-    desc: "支持企业数字化改造",
-  },
-]);
+const rows = ref<PolicyRow[]>([]);
+const error = ref(false);
+
+onMounted(async () => {
+  try {
+    const data = await getPolicies();
+    rows.value = (data?.rows || data || []).map((r: any) => ({
+      name: r.name || r.title || "",
+      dept: r.dept || r.department || r.org || "",
+      tag: r.tag || r.category || r.type || "",
+      desc: r.desc || r.description || "",
+    }));
+  } catch {
+    error.value = true;
+  }
+});
+
+const tagOptions = computed(() => {
+  const set = new Set<string>();
+  for (const r of rows.value) if (r.tag) set.add(r.tag);
+  return Array.from(set);
+});
+
 const filtered = computed(() => {
   const k = keyword.value.trim();
   return rows.value.filter(
     (r) =>
       (!tag.value || r.tag === tag.value) &&
-      (!k || JSON.stringify(r).includes(k))
+      (!k || `${r.name} ${r.dept} ${r.tag} ${r.desc}`.includes(k))
   );
 });
 </script>
