@@ -5,9 +5,9 @@
         :default-active="active"
         class="mini"
         :unique-opened="true"
+        :default-openeds="defaultOpeneds"
         @select="onSelect"
       >
-        <el-menu-item index="dualuse">两用物项</el-menu-item>
         <el-menu-item index="topic">主题视角</el-menu-item>
         <el-sub-menu index="params">
           <template #title>
@@ -23,7 +23,11 @@
             </div>
           </template>
           <el-sub-menu index="v1" v-if="versions.v1.exists">
-            <template #title>V1</template>
+            <template #title
+              ><span class="v-title" @click="enableVersion('v1')"
+                >V1</span
+              ></template
+            >
             <div class="version-actions">
               <el-button
                 type="primary"
@@ -49,7 +53,11 @@
             </div>
           </el-sub-menu>
           <el-sub-menu index="v5" v-if="versions.v5.exists">
-            <template #title>V5</template>
+            <template #title
+              ><span class="v-title" @click="enableVersion('v5')"
+                >V5</span
+              ></template
+            >
             <div class="version-actions">
               <el-button
                 type="primary"
@@ -75,7 +83,11 @@
             </div>
           </el-sub-menu>
           <el-sub-menu index="v2" v-if="versions.v2.exists">
-            <template #title>V2</template>
+            <template #title
+              ><span class="v-title" @click="enableVersion('v2')"
+                >V2</span
+              ></template
+            >
             <div class="version-actions">
               <el-button
                 type="primary"
@@ -101,7 +113,11 @@
             </div>
           </el-sub-menu>
           <el-sub-menu index="v3" v-if="versions.v3.exists">
-            <template #title>V3</template>
+            <template #title
+              ><span class="v-title" @click="enableVersion('v3')"
+                >V3</span
+              ></template
+            >
             <div class="version-actions">
               <el-button
                 type="primary"
@@ -127,7 +143,11 @@
             </div>
           </el-sub-menu>
           <el-sub-menu index="v4" v-if="versions.v4.exists">
-            <template #title>V4</template>
+            <template #title
+              ><span class="v-title" @click="enableVersion('v4')"
+                >V4</span
+              ></template
+            >
             <div class="version-actions">
               <el-button
                 type="primary"
@@ -156,7 +176,7 @@
       </el-menu>
     </div>
     <div class="right-content">
-      <div v-if="active === 'dualuse'" class="grid3">
+      <div v-if="false" class="grid3">
         <div class="card">
           <div class="card-header">
             <div class="title">标签分布</div>
@@ -195,15 +215,36 @@
       <div v-else-if="active === 'topic'" class="card">
         <div class="title">主题视角</div>
         <div class="visual-wrap">
-          <div ref="topicPieRef" class="chart" />
-          <div ref="topicTrendRef" class="chart" />
+          <div ref="abcPieRef" class="chart" />
+          <div ref="radarRef" class="chart" />
         </div>
-        <div class="table-wrap">
-          <el-table :data="topicRows" height="280">
-            <el-table-column prop="tag" label="主题标签" width="160" />
-            <el-table-column prop="count" label="计数" width="120" />
-            <el-table-column prop="risk" label="风险" width="120" />
-          </el-table>
+        <div class="visual-bottom">
+          <div class="chart-box">
+            <div class="box-toolbar">
+              <el-select
+                v-model="boxMetric"
+                placeholder="选择指标"
+                size="small"
+                style="width: 200px"
+              >
+                <el-option
+                  v-for="f in features"
+                  :key="f.name"
+                  :label="f.name"
+                  :value="f.name"
+                />
+              </el-select>
+            </div>
+            <div ref="visualBoxRef" class="chart" />
+          </div>
+          <div class="table-wrap">
+            <el-table :data="companyScores" height="300">
+              <el-table-column prop="category" label="类别" width="160" />
+              <el-table-column prop="class" label="分类" width="120" />
+              <el-table-column prop="rating" label="评级" width="120" />
+              <el-table-column prop="score" label="评分" width="120" />
+            </el-table>
+          </div>
         </div>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
@@ -252,23 +293,36 @@
             v-model="filterKeyword"
             placeholder="搜索企业/字段"
             style="max-width: 240px"
-          />
+          ></el-input>
         </div>
         <el-table
           :data="filteredRows"
           height="420"
+          size="small"
           style="width: 100%"
           @row-click="toBasic"
           @selection-change="onSelectionChange"
         >
-          <el-table-column type="selection" width="48" />
+          <el-table-column type="selection" width="48"></el-table-column>
           <el-table-column
             v-for="col in visibleColumns"
             :key="col.key"
             :prop="col.key"
             :label="col.label"
+            :width="colWidth(col.key)"
+            :show-overflow-tooltip="true"
             sortable
-          />
+          >
+            <template #default="scope">
+              <div class="cell-clamp">
+                {{
+                  Array.isArray(scope.row[col.key])
+                    ? scope.row[col.key].join(",")
+                    : String(scope.row[col.key] ?? "")
+                }}
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column fixed="right" width="160">
             <template #header>
               <el-button size="small" type="primary" @click="openFieldFilter"
@@ -390,11 +444,17 @@
           </el-steps>
         </div>
         <div ref="classRef" class="chart" />
-        <div class="footer">
-          <el-checkbox-group v-model="checkedClassBoxes">
-            <el-checkbox v-for="b in classBoxes" :key="b" :label="b" />
+        <div class="k-select-row">
+          <div class="k-labels">
+            <span v-for="k in kOptions" :key="'lbl-' + k" class="k-num">{{
+              k
+            }}</span>
+          </div>
+          <el-checkbox-group v-model="checkedK" class="k-checkboxes">
+            <el-checkbox v-for="k in kOptions" :key="'chk-' + k" :label="k" />
           </el-checkbox-group>
-          <div class="spacer" />
+        </div>
+        <div class="footer">
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
@@ -418,16 +478,16 @@
           </el-steps>
         </div>
         <div class="visual-wrap">
-          <div ref="radarRef" class="chart" />
+          <div ref="abcPieRef" class="chart" />
           <div class="table-wrap">
             <el-table :data="companyScores" height="360">
-              <el-table-column prop="name" label="企业" width="160" />
+              <el-table-column prop="category" label="类别" width="160" />
               <el-table-column prop="class" label="分类" width="120" />
               <el-table-column prop="rating" label="评级" width="120" />
               <el-table-column prop="score" label="评分" width="120" />
               <el-table-column label="操作" width="140">
                 <template #default="{ row }">
-                  <el-button size="small" @click="browseAll(row.name)"
+                  <el-button size="small" @click="browseAll(row.category)"
                     >全数据浏览</el-button
                   >
                 </template>
@@ -435,7 +495,27 @@
             </el-table>
           </div>
         </div>
-        <div class="chart-wrap"><div ref="compareRef" class="chart" /></div>
+        <div class="visual-bottom">
+          <div class="chart" ref="radarRef" />
+          <div class="chart-box">
+            <div class="box-toolbar">
+              <el-select
+                v-model="boxMetric"
+                placeholder="选择指标"
+                size="small"
+                style="width: 200px"
+              >
+                <el-option
+                  v-for="f in features"
+                  :key="f.name"
+                  :label="f.name"
+                  :value="f.name"
+                />
+              </el-select>
+            </div>
+            <div ref="visualBoxRef" class="chart" />
+          </div>
+        </div>
         <div class="footer">
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
@@ -513,10 +593,12 @@
 import { onMounted, onUnmounted, reactive, ref, watch, computed } from "vue";
 import * as echarts from "echarts";
 import { useRouter } from "vue-router";
-import { getTagDistribution } from "@/services/api";
+import { getTagDistribution, getEtpsData } from "@/services/api";
+import { ElMessage } from "element-plus";
 
 const router = useRouter();
-const active = ref("dualuse");
+const active = ref("topic");
+const defaultOpeneds = ref(["params"]);
 const onSelect = (key: string) => (active.value = key);
 const steps = ref<string[]>([]);
 const stepIndex = ref(0);
@@ -536,8 +618,8 @@ const nextStep = () => {
 const prevStep = () => {
   if (stepIndex.value > 0) goStep(stepIndex.value - 1);
 };
-const browseAll = (name: string) => {
-  router.push({ name: "企业基本信息", query: { focusName: name, only: "1" } });
+const browseAll = (category: string) => {
+  router.push({ name: "企业基本信息", query: { category } });
 };
 const versions = reactive<
   Record<string, { exists: boolean; enabled: boolean }>
@@ -586,7 +668,8 @@ const featureRef = ref<HTMLDivElement | null>(null);
 const importanceRef = ref<HTMLDivElement | null>(null);
 const classRef = ref<HTMLDivElement | null>(null);
 const radarRef = ref<HTMLDivElement | null>(null);
-const compareRef = ref<HTMLDivElement | null>(null);
+const abcPieRef = ref<HTMLDivElement | null>(null);
+const visualBoxRef = ref<HTMLDivElement | null>(null);
 const enableRef = ref<HTMLDivElement | null>(null);
 const disableRef = ref<HTMLDivElement | null>(null);
 const deleteRef = ref<HTMLDivElement | null>(null);
@@ -711,32 +794,54 @@ const renderBox = () => {
 };
 
 const filterKeyword = ref("");
-const rows = reactive<
-  { company: string; field: string; value: any; date: string }[]
->([]);
+const rows = reactive<Record<string, any>[]>([]);
 const filteredRows = ref(rows);
 const selectedEnterprises = ref<string[]>([]);
 const onSelectionChange = (sel: any[]) => {
-  selectedEnterprises.value = Array.from(new Set(sel.map((r) => r.company)));
+  selectedEnterprises.value = Array.from(new Set(sel.map((r) => r.etps_name)));
   generateAggStats();
 };
 const toBasic = (row: any) => {
-  const name = row?.company;
+  const name = row?.etps_name;
   if (!name) return;
   router.push({ name: "企业基本信息", query: { focusName: name } });
 };
+// 后端数据接入
+const page = ref(0);
+const size = ref(20);
+const total = ref(0);
+const loadEtps = async () => {
+  const q = filterKeyword.value.trim();
+  try {
+    const resp = await getEtpsData({ q, page: page.value, size: size.value });
+    const list: any[] = resp?.rows || resp || [];
+    rows.splice(0, rows.length, ...list);
+    filteredRows.value = rows;
+    total.value = Number(resp?.total || list.length || 0);
+    checkedColumns.value = allColumns.value.map((c: ColumnDef) => c.key);
+    ElMessage.success("获取企业信息成功");
+  } catch (e) {
+    filteredRows.value = [] as any;
+    ElMessage.error("后端无数据或未联通");
+  }
+};
 watch(filterKeyword, () => {
-  const k = filterKeyword.value.trim();
-  filteredRows.value = rows.filter((r) => JSON.stringify(r).includes(k));
+  loadEtps();
 });
 
 // 字段列管理与筛选
 type ColumnDef = { key: string; label: string };
 const baseColumns: ColumnDef[] = [
-  { key: "company", label: "企业" },
-  { key: "field", label: "字段" },
-  { key: "value", label: "值" },
-  { key: "date", label: "日期" },
+  { key: "etps_name", label: "企业名称" },
+  { key: "industry_phy_name", label: "行业门类" },
+  { key: "industry_code_name", label: "行业细分" },
+  { key: "area_id", label: "区域代码" },
+  { key: "aeo_rating", label: "AEO等级" },
+  { key: "total_decl_amt", label: "申报金额" },
+  { key: "total_entry_cnt", label: "申报票数" },
+  { key: "avg_ticket_val", label: "平均票值" },
+  { key: "delay_rate", label: "延误率" },
+  { key: "common_busi", label: "业务概述" },
 ];
 const allColumns = computed<ColumnDef[]>(() => {
   const keys = new Set(baseColumns.map((c) => c.key));
@@ -745,15 +850,41 @@ const allColumns = computed<ColumnDef[]>(() => {
   }
   return Array.from(keys).map((k) => ({
     key: k,
-    label: baseColumns.find((b) => b.key === k)?.label || k,
+    label:
+      baseColumns.find((b) => b.key === k)?.label ||
+      (
+        {
+          exist_status: "存在状态",
+          import_ratio: "进口比率",
+          main_ciq_codes: "主要检验检疫代码",
+          main_parent_ciq: "主要上级检验检疫",
+          top_trade_countries: "主要贸易国家",
+          transport_mode: "运输方式",
+        } as Record<string, string>
+      )[k] ||
+      k,
   }));
 });
-const checkedColumns = ref<string[]>(baseColumns.map((c: ColumnDef) => c.key));
+const checkedColumns = ref<string[]>([]);
 const visibleColumns = computed(() =>
   allColumns.value.filter((c: ColumnDef) =>
     checkedColumns.value.includes(c.key)
   )
 );
+const colWidth = (key: string) => {
+  const getLen = (v: any) => {
+    if (v === null || v === undefined) return 0;
+    const s = Array.isArray(v) ? v.join(",") : String(v);
+    return s.length;
+  };
+  let maxLen = getLen(baseColumns.find((b) => b.key === key)?.label || key);
+  for (const r of filteredRows.value) {
+    maxLen = Math.max(maxLen, getLen((r as any)[key]));
+  }
+  const charW = 12;
+  const units = Math.max(5, Math.min(Math.ceil(maxLen) + 2, 26));
+  return units * charW;
+};
 const fieldFilterVisible = ref(false);
 const openFieldFilter = () => (fieldFilterVisible.value = true);
 const resetColumns = () =>
@@ -766,6 +897,10 @@ const invertColumns = () => {
   checkedColumns.value = Array.from(all).filter((k: string) => !cur.has(k));
 };
 const confirmColumns = () => (fieldFilterVisible.value = false);
+
+onMounted(() => {
+  loadEtps();
+});
 
 const features = reactive(
   Array.from({ length: 20 }, (_, i) => {
@@ -952,25 +1087,25 @@ const renderImportance = () => {
   };
 };
 
-const classBoxes = ref<string[]>([]);
-const checkedClassBoxes = ref<string[]>([]);
+const kOptions = [1, 2, 3, 4, 5];
+const checkedK = ref<number[]>([1, 2, 3, 4, 5]);
 const renderClass = () => {
   if (!classRef.value) return;
   const chart = echarts.init(classRef.value);
-  const ks = [2, 3, 4, 5, 6, 7, 8, 9, 10];
-  const base = [0.095, 0.072, 0.063, 0.062, 0.058, 0.057, 0.061, 0.053, 0.05];
-  const factor = 1 + Math.min(checkedClassBoxes.value.length, 60) * 0.003;
-  const silhouette = base.map((v) => Number((v * factor).toFixed(3)));
+  const ks = [1, 2, 3, 4, 5];
+  const base = [0.72, 0.78, 0.83, 0.81, 0.76];
+  const factor = 1 + Math.min(checkedK.value.length, 5) * 0.02;
+  const scores = base.map((v) => Number((v * factor).toFixed(3)));
   const option = {
-    title: { text: "Silhouette Scores vs. Number of Clusters", left: "center" },
+    title: { text: "分类数量与评分(1-5)", left: "center" },
     grid: { left: 50, right: 20, top: 50, bottom: 40 },
-    xAxis: { type: "category", name: "Number of Clusters (k)", data: ks },
-    yAxis: { type: "value", name: "Silhouette Score", min: 0, max: 0.12 },
+    xAxis: { type: "category", name: "分类数", data: ks },
+    yAxis: { type: "value", name: "评分", min: 0.5, max: 1.0 },
     series: [
       {
-        name: "Silhouette",
+        name: "Score",
         type: "line",
-        data: silhouette,
+        data: scores,
         symbol: "circle",
         symbolSize: 8,
         lineStyle: { width: 3, color: "#3b82f6" },
@@ -991,24 +1126,94 @@ const renderClass = () => {
 const renderRadar = () => {
   if (!radarRef.value) return;
   const chart = echarts.init(radarRef.value);
-  const names = selectedEnterprises.value.length
-    ? selectedEnterprises.value
-    : ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"];
-  const classes = ["低", "中", "高", "极高"];
-  const data = classes.map((c, i) => ({ name: c, value: (i + 1) * 10 }));
+  const feats = checkedFeatures.value.length
+    ? checkedFeatures.value
+    : features.slice(0, 6).map((f) => f.name);
+  const indicators = feats.map((n) => ({ name: n, max: 100 }));
+  const makeVals = (seed: number) =>
+    indicators.map((_, i) =>
+      Math.max(30, Math.min(95, Math.round(60 + 15 * Math.sin(seed + i))))
+    );
   const option = {
-    title: { text: "分类分布（饼图）", left: "center" },
+    title: { text: "ABC类企业指标雷达图", left: "center" },
+    legend: { data: ["A类", "B类", "C类"], top: 28 },
+    radar: { indicator: indicators },
+    series: [
+      {
+        type: "radar",
+        data: [
+          { name: "A类", value: makeVals(1) },
+          { name: "B类", value: makeVals(2) },
+          { name: "C类", value: makeVals(3) },
+        ],
+      },
+    ],
     tooltip: { trigger: "item" },
-    series: [{ type: "pie", radius: ["40%", "70%"], data: data }],
   };
   chart.setOption(option);
-  chart.on("click", (p: any) => {
-    const t = String(p?.name || "").trim();
-    if (t) router.push({ name: "标签企业列表", query: { tag: t } });
-  });
-  window.addEventListener("resize", () => chart.resize());
+  const onResize = () => chart.resize();
+  window.addEventListener("resize", onResize);
   return () => {
-    window.removeEventListener("resize", () => chart.resize());
+    window.removeEventListener("resize", onResize);
+    chart.dispose();
+  };
+};
+
+const boxMetric = ref<string>("");
+const renderVisualBox = () => {
+  if (!visualBoxRef.value) return;
+  const chart = echarts.init(visualBoxRef.value);
+  const option = {
+    title: { text: `箱线图：${boxMetric.value || "指标"}`, left: "center" },
+    tooltip: { trigger: "item" },
+    legend: { data: ["A类", "B类", "C类"] },
+    xAxis: { type: "category", data: ["A类", "B类", "C类"] },
+    yAxis: { type: "value" },
+    series: [
+      { name: "A类", type: "boxplot", data: [[20, 35, 50, 65, 80]] },
+      { name: "B类", type: "boxplot", data: [[25, 40, 55, 70, 85]] },
+      { name: "C类", type: "boxplot", data: [[30, 45, 60, 75, 90]] },
+    ],
+  };
+  chart.setOption(option);
+  const onResize = () => chart.resize();
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
+    chart.dispose();
+  };
+};
+
+const renderABCPie = () => {
+  if (!abcPieRef.value) return;
+  const chart = echarts.init(abcPieRef.value);
+  const dist = { A: 0, B: 0, C: 0 } as Record<string, number>;
+  for (const r of filteredRows.value) {
+    const v = String(r.aeo_rating || "").toUpperCase();
+    if (v === "A") dist.A++;
+    else if (v === "B") dist.B++;
+    else if (v === "C") dist.C++;
+  }
+  const total = Math.max(1, dist.A + dist.B + dist.C);
+  const data = [
+    { name: "A类", value: dist.A },
+    { name: "B类", value: dist.B },
+    { name: "C类", value: dist.C },
+  ];
+  const option = {
+    title: { text: "ABC类别占比（饼图）", left: "center" },
+    tooltip: {
+      trigger: "item",
+      formatter: (p: any) =>
+        `${p.name}: ${p.value} (${Math.round((p.value / total) * 100)}%)`,
+    },
+    series: [{ type: "pie", radius: ["40%", "70%"], data }],
+  };
+  chart.setOption(option);
+  const onResize = () => chart.resize();
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
     chart.dispose();
   };
 };
@@ -1075,44 +1280,7 @@ const renderDelete = () => {
   };
 };
 
-const selectionSummary = () => {
-  const names = new Set(checkedFeatures.value);
-  const selected = features.filter((f) => names.has(f.name));
-  const count = selected.length || 1;
-  const widths = selected.map(
-    (f) => (curRange.value[1] - curRange.value[0]) / (f.max - f.min)
-  );
-  const avgWidth = widths.length
-    ? widths.reduce((a, b) => a + b, 0) / widths.length
-    : 1;
-  return { count, avgWidth };
-};
-
-const renderCompare = () => {
-  if (!compareRef.value) return;
-  const chart = echarts.init(compareRef.value);
-  const { count, avgWidth } = selectionSummary();
-  const names = selectedEnterprises.value.length
-    ? selectedEnterprises.value
-    : ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"];
-  const base = 60;
-  const scores = names.map((_, i) =>
-    Math.round(base + 5 * (i + 1) + 8 * count * (1 - avgWidth))
-  );
-  const option = {
-    title: { text: "企业对比（评分）", left: "center" },
-    xAxis: { type: "category", data: names },
-    yAxis: { type: "value" },
-    series: [{ type: "bar", data: scores, itemStyle: { color: "#3b82f6" } }],
-    tooltip: { trigger: "axis" },
-  };
-  chart.setOption(option);
-  window.addEventListener("resize", () => chart.resize());
-  return () => {
-    window.removeEventListener("resize", () => chart.resize());
-    chart.dispose();
-  };
-};
+// 删除旧的对比柱状图，改为雷达+箱线图
 
 const topicRows = ref([
   { tag: "价格异常", count: 28, risk: "高" },
@@ -1177,14 +1345,11 @@ const renderTopicTrend = () => {
   };
 };
 
-const companyScores = ref(
-  ["华北电力集团", "北京首钢集团", "上海电气股份有限公司"].map((n, i) => ({
-    name: n,
-    class: "两用物项",
-    rating: ["A级", "B级", "A-级"][i % 3],
-    score: 80 + i * 3,
-  }))
-);
+const companyScores = ref([
+  { category: "A类", class: "两用物项", rating: "A级", score: 88 },
+  { category: "B类", class: "两用物项", rating: "B级", score: 80 },
+  { category: "C类", class: "两用物项", rating: "C级", score: 74 },
+]);
 
 const tagRows = ref<
   { name: string; feature: string; slice: string; expert?: string }[]
@@ -1210,12 +1375,7 @@ const updatedScores = ref([
 const reset = () => {
   filterKeyword.value = "";
   checkedFeatures.value = features.map((f) => f.name);
-  classBoxes.value = checkedFeatures.value.flatMap((n) => [
-    `${n}-左值`,
-    `${n}-中值`,
-    `${n}-右值`,
-  ]);
-  checkedClassBoxes.value = [...classBoxes.value];
+  checkedK.value = [1, 2, 3, 4, 5];
 };
 const finish = () => {
   finished.value = true;
@@ -1241,15 +1401,19 @@ const mountCharts = async () => {
     const d = renderClass();
     if (d) disposers.push(d);
   } else if (active.value.endsWith("visual")) {
-    const d = renderRadar();
-    if (d) disposers.push(d);
-    const c = renderCompare();
-    if (c) disposers.push(c);
+    const p = renderABCPie();
+    if (p) disposers.push(p);
+    const r = renderRadar();
+    if (r) disposers.push(r);
+    const b = renderVisualBox();
+    if (b) disposers.push(b);
   } else if (active.value === "topic") {
-    const d1 = renderTopicPie();
-    if (d1) disposers.push(d1);
-    const d2 = renderTopicTrend();
-    if (d2) disposers.push(d2);
+    const p = renderABCPie();
+    if (p) disposers.push(p);
+    const r = renderRadar();
+    if (r) disposers.push(r);
+    const b = renderVisualBox();
+    if (b) disposers.push(b);
   } else if (active.value.endsWith("enable")) {
     const d = renderEnable();
     if (d) disposers.push(d);
@@ -1262,39 +1426,9 @@ const mountCharts = async () => {
   }
 };
 
-import { getEnterpriseBasicInfo } from "@/services/api";
 onMounted(async () => {
-  try {
-    const data = await getEnterpriseBasicInfo(undefined);
-    const list = (data?.rows || []).map((r: any) => ({
-      name: r.name,
-      category: r.category,
-      region: r.region,
-      risk: r.risk,
-    }));
-    const today = new Date().toISOString().slice(0, 10);
-    list.forEach((r: any) => {
-      rows.push({
-        company: r.name,
-        field: "类别",
-        value: r.category,
-        date: today,
-      });
-      rows.push({
-        company: r.name,
-        field: "地区",
-        value: r.region,
-        date: today,
-      });
-      rows.push({
-        company: r.name,
-        field: "风险等级",
-        value: r.risk,
-        date: today,
-      });
-    });
-    filteredRows.value = rows;
-  } catch {}
+  await loadEtps();
+  boxMetric.value = features[0]?.name || "";
   mountCharts();
 });
 watch(active, () => {
@@ -1302,19 +1436,14 @@ watch(active, () => {
     setVersionSteps(versionOf(active.value));
   }
   if (active.value.endsWith("class")) {
-    classBoxes.value = (checkedFeatures.value || []).flatMap((n) => [
-      `${n}-左值`,
-      `${n}-中值`,
-      `${n}-右值`,
-    ]);
-    checkedClassBoxes.value = [...classBoxes.value];
+    // 分类数勾选在 checkedK 中维护，无需生成旧的 classBoxes
   }
   if (active.value.endsWith("tag")) {
     refreshTagRows();
   }
   setTimeout(mountCharts, 0);
 });
-watch(checkedClassBoxes, () => {
+watch(checkedK, () => {
   if (active.value.endsWith("class")) setTimeout(mountCharts, 0);
 });
 watch(distChartType, () => {
@@ -1358,6 +1487,9 @@ onUnmounted(() => {
   justify-content: space-between;
   width: 100%;
 }
+.v-title {
+  cursor: pointer;
+}
 .chart-wrap {
   display: flex;
   align-items: center;
@@ -1388,7 +1520,13 @@ onUnmounted(() => {
   margin-bottom: 8px;
 }
 .chart {
-  height: 260px;
+  height: 320px;
+}
+.visual-bottom .chart {
+  height: 280px;
+}
+.visual-wrap .chart {
+  height: 320px;
 }
 .btns {
   display: flex;
@@ -1449,14 +1587,65 @@ onUnmounted(() => {
   gap: 12px;
 }
 .visual-wrap {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+  gap: 16px;
+}
+.visual-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+  margin-top: 12px;
+}
+.chart-box {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+}
+.box-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
 }
 .table-wrap {
   flex: 1;
 }
+.table-wrap :deep(.el-table .cell) {
+  padding: 4px 6px;
+  line-height: 1.3;
+}
+.cell-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
 .spacer {
   flex: 1;
+}
+.k-select-row {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 6px;
+  justify-items: center;
+  margin-top: 8px;
+}
+.k-labels {
+  display: flex;
+  gap: 16px;
+}
+.k-num {
+  display: inline-block;
+  width: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.k-checkboxes {
+  display: flex;
+  gap: 16px;
 }
 .after {
   margin-top: 12px;

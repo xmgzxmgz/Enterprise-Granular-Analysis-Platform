@@ -57,3 +57,21 @@ export async function getPolicies() {
 export async function getModelPrepData() {
   return request("/modeling/prep");
 }
+
+export async function getEtpsData(params?: {
+  page?: number;
+  size?: number;
+  q?: string;
+  areaId?: string;
+  industryPhyName?: string;
+  industryCodeName?: string;
+  aeoRating?: string;
+}) {
+  const qs = new URLSearchParams();
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && String(v).length)
+      qs.append(k, String(v));
+  });
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return request(`/etps-data${suffix}`);
+}

@@ -15,7 +15,38 @@
         class="tree-large"
         style="min-height: 520px"
         @node-click="onNodeClick"
-      />
+      >
+        <template #default="{ data }">
+          <div class="node-line">
+            <span class="node-label">{{ data.label }}</span>
+            <span v-if="isJumpNode(data.fullPath)" class="node-actions">
+              <div class="actions-mask">
+                <el-button
+                  size="small"
+                  type="primary"
+                  plain
+                  @click.stop="go(data.fullPath, 'modeling')"
+                  >建模</el-button
+                >
+                <el-button
+                  size="small"
+                  type="primary"
+                  plain
+                  @click.stop="go(data.fullPath, 'tuning')"
+                  >调优</el-button
+                >
+                <el-button
+                  size="small"
+                  type="primary"
+                  plain
+                  @click.stop="go(data.fullPath, 'publish')"
+                  >发布</el-button
+                >
+              </div>
+            </span>
+          </div>
+        </template>
+      </el-tree>
       <el-empty v-else description="无子菜单" />
     </el-card>
   </div>
@@ -86,6 +117,16 @@ const subTitle = computed(() => {
 const onNodeClick = (data: any) => {
   if (!data.children || !data.children.length) router.push(data.fullPath);
 };
+
+const jumpTargets = new Set([
+  "/theme-management/export-risk/sensitive-items/dual-use",
+  "/theme-management/export-risk/key-items/frozen-fish",
+  "/theme-management/export-risk/cross-border-sensitive-distribution/frequency-assign",
+]);
+const isJumpNode = (p: string) => jumpTargets.has(p);
+const go = (p: string, tab: "modeling" | "tuning" | "publish") => {
+  router.push({ path: p, query: { tab } });
+};
 </script>
 
 <style scoped>
@@ -119,6 +160,33 @@ const onNodeClick = (data: any) => {
 }
 .tree-large {
   font-size: 16px;
+}
+.node-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.node-label {
+  flex: 1 1 auto;
+}
+.node-actions {
+  flex: 0 0 auto;
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.actions-mask {
+  display: flex;
+  gap: 12px;
+  padding: 6px 10px;
+  border: 1px solid #bfdbfe;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: 8px;
+}
+.node-actions :deep(.el-button) {
+  padding: 6px 12px;
 }
 .panel :deep(.el-card__body) {
   padding: 20px 24px;

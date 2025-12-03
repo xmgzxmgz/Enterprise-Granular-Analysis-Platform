@@ -38,9 +38,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import * as echarts from "echarts";
 const activeTab = ref<"modeling" | "tuning" | "publish">("modeling");
+const route = useRoute();
+const syncTab = () => {
+  const t = String(route.query.tab || "");
+  if (t === "tuning" || t === "publish" || t === "modeling") {
+    activeTab.value = t as any;
+  }
+};
+syncTab();
+watch(() => route.query.tab, syncTab);
 const freqRef = ref<HTMLDivElement | null>(null);
 const heatRef = ref<HTMLDivElement | null>(null);
 

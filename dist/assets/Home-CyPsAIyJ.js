@@ -1,1 +1,0 @@
-import{d as e,c as o,a,H as s,o as t,_ as c}from"./index-DoW-C9DT.js";const _={class:"home-wrap"},n=e({__name:"Home",setup(r){return(m,p)=>(t(),o("div",_,[a(s)]))}}),f=c(n,[["__scopeId","data-v-f6f3474d"]]);export{f as default};
