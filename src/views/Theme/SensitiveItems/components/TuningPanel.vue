@@ -593,7 +593,7 @@ const renderDist = async () => {
   chart.setOption(option);
   chart.on("click", (params: any) => {
     const cat = params.name;
-    router.push({ path: "/rating-profile/基本信息", query: { category: cat } });
+    router.push({ name: "企业基本信息", query: { category: cat } });
   });
   const onResize = () => chart.resize();
   window.addEventListener("resize", onResize);
@@ -689,7 +689,7 @@ const onSelectionChange = (sel: any[]) => {
 const toBasic = (row: any) => {
   const name = row?.company;
   if (!name) return;
-  router.push({ path: "/rating-profile/基本信息", query: { focusName: name } });
+  router.push({ name: "企业基本信息", query: { focusName: name } });
 };
 watch(filterKeyword, () => {
   const k = filterKeyword.value.trim();
@@ -933,11 +933,7 @@ const renderRadar = () => {
   chart.setOption(option);
   chart.on("click", (p: any) => {
     const t = String(p?.name || "").trim();
-    if (t)
-      router.push({
-        path: "/rating-profile/标签管理/标签企业列表",
-        query: { tag: t },
-      });
+    if (t) router.push({ name: "标签企业列表", query: { tag: t } });
   });
   window.addEventListener("resize", () => chart.resize());
   return () => {
@@ -1101,11 +1097,7 @@ const renderTopicTrend = () => {
   chart.setOption(option);
   chart.on("click", (p: any) => {
     const t = String(p?.seriesName || "").trim();
-    if (t)
-      router.push({
-        path: "/rating-profile/标签管理/标签企业列表",
-        query: { tag: t },
-      });
+    if (t) router.push({ name: "标签企业列表", query: { tag: t } });
   });
   window.addEventListener("resize", () => chart.resize());
   return () => {

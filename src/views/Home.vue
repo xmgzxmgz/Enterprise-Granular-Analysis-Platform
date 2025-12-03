@@ -1,145 +1,27 @@
 <template>
   <div class="home-wrap">
-    <div v-if="!selectedRoot" class="center">
+    <div class="center">
       <div class="main-title">导航中心</div>
       <div class="btn-grid">
-        <el-card class="big-btn" @click="enterRoot('/theme-management')">
+        <el-card class="big-btn" @click="goTheme()">
           <div class="btn-title">分类主题管理</div>
           <div class="btn-desc">出口风险分类、敏感物品、跨境电商</div>
         </el-card>
-        <el-card class="big-btn" @click="enterRoot('/rating-profile')">
+        <el-card class="big-btn" @click="goRating()">
           <div class="btn-title">企业分类评级画像</div>
           <div class="btn-desc">企业基本信息、标签管理与分析</div>
         </el-card>
       </div>
     </div>
-    <div v-else class="nav-area">
-      <el-card class="selector-card">
-        <div class="selector-title">点击上一级展开下一级</div>
-        <el-tree
-          v-if="treeData.length"
-          :data="treeData"
-          :props="{ children: 'children', label: 'label' }"
-          highlight-current
-          :expand-on-click-node="true"
-          default-expand-all
-          class="tree-large"
-          @node-click="onNodeClick"
-        />
-        <el-empty v-else description="无子菜单" />
-      </el-card>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
-
-type Node = { label: string; fullPath: string; children: Record<string, Node> };
-type TreeItem = { label: string; fullPath: string; children?: TreeItem[] };
+import { useRouter } from "vue-router";
 
 const router = useRouter();
-const route = useRoute();
-const selectedRoot = ref("");
-const segments = ref<string[]>([]);
-const tree = ref<Record<string, Node>>({});
-
-const buildTree = (base: string) => {
-  const root: Node = { label: base, fullPath: base, children: {} };
-  const all = router.getRoutes();
-  for (const r of all) {
-    const p = r.path;
-    if (!p.startsWith(base + "/")) continue;
-    const rest = p.substring(base.length + 1);
-    if (!rest) continue;
-    const segs = rest.split("/").filter(Boolean);
-    let cur = root;
-    let curPath = base;
-    for (const s of segs) {
-      curPath = curPath + "/" + s;
-      cur.children[s] = cur.children[s] || {
-        label: s,
-        fullPath: curPath,
-        children: {},
-      };
-      cur = cur.children[s];
-    }
-  }
-  return root;
-};
-
-const enterRoot = (base: string) => {
-  selectedRoot.value = base;
-  segments.value = [];
-  tree.value = { [base]: buildTree(base) };
-};
-
-const currentNode = computed(() => {
-  if (!selectedRoot.value) return null;
-  let cur: Node | null = tree.value[selectedRoot.value];
-  for (const s of segments.value) {
-    if (!cur) break;
-    cur = cur.children[s] || null;
-  }
-  return cur;
-});
-
-const toArray = (n: Node): TreeItem[] => {
-  const list: TreeItem[] = [];
-  for (const child of Object.values(n.children)) {
-    const item: TreeItem = {
-      label: child.label,
-      fullPath: child.fullPath,
-    };
-    const sub = toArray(child);
-    if (sub.length) item.children = sub;
-    list.push(item);
-  }
-  return list;
-};
-const treeData = computed(() => {
-  const cur = currentNode.value;
-  if (!cur) return [];
-  return toArray(cur);
-});
-
-const rootLabel = computed(() =>
-  selectedRoot.value === "/theme-management"
-    ? "分类主题管理"
-    : "企业分类评级画像"
-);
-
-const onNodeClick = (data: any) => {
-  if (!data.children || !data.children.length) {
-    router.push(data.fullPath);
-  }
-};
-
-const reset = () => {
-  selectedRoot.value = "";
-  segments.value = [];
-  tree.value = {};
-};
-
-onMounted(() => {
-  selectedRoot.value = "";
-});
-
-watch(
-  () => route.path,
-  (p) => {
-    if (p === "/home") {
-      const root = String(route.query.root || "");
-      if (root === "/theme-management" || root === "/rating-profile") {
-        enterRoot(root);
-      } else {
-        reset();
-      }
-    }
-  },
-  { immediate: true }
-);
+const goTheme = () => router.push({ path: "/theme-management" });
+const goRating = () => router.push({ path: "/rating-profile" });
 </script>
 
 <style scoped>

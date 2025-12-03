@@ -82,25 +82,24 @@ type Crumb = { label: string; to: { name?: string; path?: string } };
 const crumbItems = computed<Crumb[]>(() => {
   const items: Crumb[] = [{ label: "首页", to: { path: "/home" } }];
   const matched = route.matched;
+  const themeContainers = new Set([
+    "分类主题管理",
+    "企业出口风险分类",
+    "敏感物品管控",
+    "重点物品",
+    "跨境电商出口敏感指标数频分配",
+  ]);
+  const ratingContainers = new Set(["企业分类评级画像", "标签管理"]);
   for (const m of matched) {
     const nm = String(m.name ?? "");
+    if (!nm) continue;
     if (nm === "首页") continue;
-    // 顶层分类菜单通过首页跳转并携带 root 查询参数以显示树形菜单
-    if (nm === "分类主题管理") {
-      items.push({
-        label: nm,
-        to: {
-          path: "/home",
-          query: { root: "/theme-management" } as any,
-        } as any,
-      });
+    if (themeContainers.has(nm)) {
+      items.push({ label: nm, to: { path: "/theme-management" } });
       continue;
     }
-    if (nm === "企业分类评级画像") {
-      items.push({
-        label: nm,
-        to: { path: "/home", query: { root: "/rating-profile" } as any } as any,
-      });
+    if (ratingContainers.has(nm)) {
+      items.push({ label: nm, to: { path: "/rating-profile" } });
       continue;
     }
     items.push({
