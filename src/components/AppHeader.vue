@@ -24,11 +24,11 @@
       />
     </div>
     <div class="right">
-      <el-tag type="info">Enterprise Granular Analysis Platform</el-tag>
+      <el-tag type="info" size="large">福州海关EGAP系统</el-tag>
       <el-popover placement="bottom-end" width="420" trigger="click">
         <template #reference>
           <el-badge :value="notifications.length" :max="99">
-            <el-button size="small" type="primary" plain>消息</el-button>
+            <el-button size="large" type="primary" plain>消息</el-button>
           </el-badge>
         </template>
         <div class="notify-list">
@@ -78,19 +78,42 @@ const route = useRoute();
 const router = useRouter();
 const keyword = ref("");
 
-const crumbItems = computed<{ label: string; name?: string }[]>(() => {
+type Crumb = { label: string; to: { name?: string; path?: string } };
+const crumbItems = computed<Crumb[]>(() => {
+  const items: Crumb[] = [{ label: "首页", to: { path: "/home" } }];
   const matched = route.matched;
-  // 优先使用当前匹配链的名称，避免重复拼接 meta.breadcrumb
-  const items = matched.map((m) => ({
-    label: String(m.name ?? m.path),
-    name: String(m.name ?? ""),
-  }));
+  for (const m of matched) {
+    const nm = String(m.name ?? "");
+    if (nm === "首页") continue;
+    // 顶层分类菜单通过首页跳转并携带 root 查询参数以显示树形菜单
+    if (nm === "分类主题管理") {
+      items.push({
+        label: nm,
+        to: {
+          path: "/home",
+          query: { root: "/theme-management" } as any,
+        } as any,
+      });
+      continue;
+    }
+    if (nm === "企业分类评级画像") {
+      items.push({
+        label: nm,
+        to: { path: "/home", query: { root: "/rating-profile" } as any } as any,
+      });
+      continue;
+    }
+    items.push({
+      label: nm || String(m.path),
+      to: nm ? { name: nm } : { path: m.path },
+    });
+  }
   return items;
 });
 
 const onCrumbClick = (index: number) => {
-  const rec = route.matched[index];
-  if (rec?.name) router.push({ name: String(rec.name) });
+  const c = crumbItems.value[index];
+  if (c?.to) router.push(c.to as any);
 };
 
 const onSearch = () => {
@@ -233,7 +256,7 @@ const formatTime = (t: number) => {
 .header-wrap {
   min-height: 80px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
 }
@@ -249,6 +272,7 @@ const formatTime = (t: number) => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  gap: 8px;
   width: 30%;
 }
 .notify-list {
@@ -300,5 +324,21 @@ const formatTime = (t: number) => {
 }
 .search-input {
   width: 100%;
+}
+.search-input :deep(.el-input__wrapper) {
+  height: 44px;
+}
+.right :deep(.el-tag) {
+  height: 44px;
+  line-height: 44px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+.right :deep(.el-button) {
+  height: 44px;
+}
+.right :deep(.el-badge) {
+  display: flex;
+  align-items: center;
 }
 </style>

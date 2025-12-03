@@ -865,7 +865,7 @@ const renderImportance = () => {
     Number((0.15 * Math.exp(-i / 6)).toFixed(3))
   );
   const option = {
-    title: { text: "SWAP Feature Importance (Top 20 Feat)", left: "center" },
+    title: { text: "SHAP Feature Importance (Top 20 Feat)", left: "center" },
     grid: { left: 180, right: 20, top: 40, bottom: 30 },
     xAxis: { type: "value" },
     yAxis: { type: "category", data: cats },

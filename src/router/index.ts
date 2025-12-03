@@ -145,6 +145,18 @@ const routes: RouteRecordRaw[] = [
           },
         ],
       },
+      {
+        path: "企业搜索结果",
+        name: "企业搜索结果",
+        component: () => import("@/views/Rating/SearchResults.vue"),
+        meta: { breadcrumb: ["企业分类评级画像", "企业搜索结果"] },
+      },
+      {
+        path: "企业详情",
+        name: "企业详情",
+        component: () => import("@/views/Rating/EnterpriseDetail.vue"),
+        meta: { breadcrumb: ["企业分类评级画像", "企业详情"] },
+      },
     ],
   },
 ];

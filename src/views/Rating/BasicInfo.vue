@@ -1,7 +1,7 @@
 <template>
   <div class="wrap">
     <el-card>
-      <div class="title">企业基本信息与标签</div>
+      <div class="title">企业基本信息搜索</div>
       <el-alert
         v-if="error"
         type="error"
@@ -9,138 +9,69 @@
         show-icon
         closable
       />
-      <el-empty v-else-if="!rows.length" description="后端无数据" />
-      <el-table
-        v-else
-        :data="rows"
-        height="520"
-        :row-class-name="rowClass"
-        row-key="name"
-        @row-click="openDetail"
+      <div class="search-wrap">
+        <el-autocomplete
+          v-model="searchKeyword"
+          class="search-input"
+          size="large"
+          :fetch-suggestions="fetchSuggestions"
+          placeholder="输入企业名称进行搜索（支持联想）"
+          clearable
+          trigger-on-focus
+          :debounce="80"
+          @select="onSelectSuggestion"
+          @keyup.enter="onSearch"
+        />
+        <div class="hint">搜索后将跳转至独立结果页并按当前排版展示企业</div>
+      </div>
+
+      <el-dialog
+        v-model="detailVisible"
+        title="企业信息介绍"
+        width="860px"
+        append-to-body
       >
-        <el-table-column prop="name" label="企业" width="180" />
-        <el-table-column prop="category" label="类别" width="120" />
-        <el-table-column prop="region" label="地区" width="120" />
-        <el-table-column prop="risk" label="风险等级" width="120" />
-        <el-table-column prop="origin" label="来源" width="120" />
-        <el-table-column label="标签配置" min-width="400">
-          <template #default="{ row }">
-            <div class="tags-inline">
-              <div
-                class="tags-clip"
-                :class="{ expanded: expanded[row.name] }"
-                :ref="(el) => setTagRef(el, row.name)"
+        <div v-if="detailRow" class="intro-grid">
+          <div class="intro-section">
+            <div class="intro-title">基本属性</div>
+            <el-descriptions :column="4" border>
+              <el-descriptions-item label="成立日期">—</el-descriptions-item>
+              <el-descriptions-item label="注册地">—</el-descriptions-item>
+              <el-descriptions-item label="注册资本">—</el-descriptions-item>
+              <el-descriptions-item label="实收资本">—</el-descriptions-item>
+              <el-descriptions-item label="企业性质">—</el-descriptions-item>
+              <el-descriptions-item label="监管机关">—</el-descriptions-item>
+              <el-descriptions-item label="高管人员">—</el-descriptions-item>
+              <el-descriptions-item label="法人">—</el-descriptions-item>
+            </el-descriptions>
+          </div>
+          <div class="intro-section">
+            <div class="intro-title">行业属性</div>
+            <el-descriptions :column="4" border>
+              <el-descriptions-item label="生产/贸易/混合型"
+                >—</el-descriptions-item
               >
-                <el-tag
-                  v-for="(t, i) in row.manualTags || []"
-                  :key="row.name + '-m-' + i"
-                  size="small"
-                  class="tag-item tag-grey"
-                  effect="plain"
-                  type="info"
-                  >{{ t }}</el-tag
-                >
-                <el-tag
-                  v-for="(t, i) in row.modelTags || []"
-                  :key="row.name + '-b-' + i"
-                  size="small"
-                  class="tag-item tag-blue"
-                  type="primary"
-                  >{{ t }}</el-tag
-                >
-                <div
-                  v-if="hasOverflow[row.name] && !expanded[row.name]"
-                  class="fade-mask"
-                >
-                  <span class="ellipsis">…</span>
-                </div>
-              </div>
-              <el-button
-                class="action-btn"
-                type="primary"
-                plain
-                size="small"
-                round
-                @click="openAdd(row.name)"
-                >添加标签</el-button
-              >
-              <el-button
-                v-if="hasOverflow[row.name] || expanded[row.name]"
-                class="action-btn expand-btn"
-                type="primary"
-                plain
-                size="small"
-                round
-                @click="toggleExpand(row.name)"
-                >{{ expanded[row.name] ? "收起 ▴" : "展开 ▾" }}</el-button
-              >
-              <el-dialog
-                v-model="addVisible[row.name]"
-                title="选择或添加标签"
-                width="640px"
-                append-to-body
-              >
-                <el-select
-                  v-model="addSelection[row.name]"
-                  multiple
-                  filterable
-                  allow-create
-                  default-first-option
-                  placeholder="选择/添加标签"
-                  style="width: 100%"
-                >
-                  <el-option
-                    v-for="t in tagOptions"
-                    :key="t"
-                    :label="t"
-                    :value="t"
-                  />
-                </el-select>
-                <div class="custom-wrap">
-                  <el-input
-                    v-if="showCustom[row.name]"
-                    v-model="customInput[row.name]"
-                    placeholder="输入自定义标签"
-                    style="width: 70%"
-                  />
-                  <el-button
-                    type="primary"
-                    plain
-                    @click="toggleCustom(row.name)"
-                    >{{
-                      showCustom[row.name] ? "添加自定义" : "自定义标签"
-                    }}</el-button
-                  >
-                  <el-button
-                    v-if="showCustom[row.name]"
-                    @click="addCustom(row.name)"
-                    type="primary"
-                    >加入选择</el-button
-                  >
-                </div>
-                <template #footer>
-                  <div class="dialog-footer">
-                    <el-button @click="closeAdd(row.name)">取消</el-button>
-                    <el-button type="primary" @click="confirmAdd(row)"
-                      >确认添加</el-button
-                    >
-                  </div>
-                </template>
-              </el-dialog>
-            </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="" width="120" align="right">
-          <template #default="{ row }"> </template>
-        </el-table-column>
-      </el-table>
+              <el-descriptions-item label="产业类别">{{
+                detailRow.category
+              }}</el-descriptions-item>
+              <el-descriptions-item label="专精特新">—</el-descriptions-item>
+              <el-descriptions-item label="地区">{{
+                detailRow.region
+              }}</el-descriptions-item>
+            </el-descriptions>
+          </div>
+        </div>
+        <template #footer>
+          <el-button @click="detailVisible = false">关闭</el-button>
+        </template>
+      </el-dialog>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {
   getEnterpriseBasicInfo,
   getTags,
@@ -176,12 +107,38 @@ const showCustom = ref<Record<string, boolean>>({});
 const customInput = ref<Record<string, string>>({});
 const saveError = ref(false);
 const saveOk = ref(false);
+const router = useRouter();
+
+// 搜索与联想
+const searchKeyword = ref("");
+const fetchSuggestions = async (
+  q: string,
+  cb: (list: { value: string }[]) => void
+) => {
+  const k = q.trim();
+  const list = rows.value
+    .map((r) => r.name)
+    .filter((n) => !k || n.includes(k))
+    .slice(0, 10)
+    .map((n) => ({ value: n }));
+  cb(list);
+};
+const onSelectSuggestion = (item: { value: string }) => {
+  searchKeyword.value = item.value;
+  onSearch();
+};
+const onSearch = () => {
+  const q = searchKeyword.value.trim();
+  if (!q) return;
+  router.push({ name: "企业详情", query: { name: q } });
+};
 
 // Overflow detection
 const hasOverflow = ref<Record<string, boolean>>({});
 const tagRefs = ref<Record<string, HTMLElement>>({});
 const observers = new Map<string, ResizeObserver>();
 const expanded = ref<Record<string, boolean>>({});
+const expandedKeys = ref<string[]>([]);
 
 const checkOneOverflow = (name: string) => {
   const el = tagRefs.value[name];
@@ -326,6 +283,7 @@ onMounted(async () => {
   rows.value.forEach(
     (r) => (editTags.value[r.name] = [...(r.manualTags || r.tags || [])])
   );
+  expandedKeys.value = rows.value.map((r) => r.name);
 });
 const rowClass = ({ row }: { row: Row }) => {
   if (focusName && row.name === focusName) return "row-focus";
@@ -405,6 +363,17 @@ const saveRowTags = async (row: Row) => {
   font-weight: 600;
   margin-bottom: 8px;
 }
+.search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.search-input {
+  width: 520px;
+}
+.hint {
+  color: var(--text-secondary);
+}
 .row-existing :deep(.el-table__row) {
   color: #6b7280;
 }
@@ -415,6 +384,10 @@ const saveRowTags = async (row: Row) => {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  width: 100%;
+  border-top: 1px dashed var(--border-color);
+  padding-top: 8px;
+  margin-top: 8px;
 }
 .tags-clip {
   flex: 1;
@@ -422,25 +395,23 @@ const saveRowTags = async (row: Row) => {
   flex-wrap: wrap;
   gap: 4px;
   overflow: hidden;
-  max-height: 78px;
+  --tag-height: 26px;
+  --row-gap: 4px;
+  max-height: calc(var(--tag-height) * 3 + var(--row-gap) * 2);
   position: relative;
 }
 .tags-clip.expanded {
   max-height: none;
 }
-.fade-mask {
+.ellipsis-tag {
   position: absolute;
   right: 0;
   bottom: 0;
-  display: flex;
-  align-items: center;
-  height: 26px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0), #fff 60%);
-  padding-left: 16px;
-}
-.ellipsis {
-  font-weight: 600;
-  color: #6b7280;
+  height: var(--tag-height);
+  line-height: var(--tag-height);
+  border: 1px solid #ef4444;
+  color: #111827;
+  background: #fff;
 }
 .action-btn {
   height: 28px;
@@ -473,52 +444,6 @@ const saveRowTags = async (row: Row) => {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.08);
 }
-</style>
-
-<template>
-  <el-dialog
-    v-model="detailVisible"
-    title="企业信息介绍"
-    width="860px"
-    append-to-body
-  >
-    <div v-if="detailRow" class="intro-grid">
-      <div class="intro-section">
-        <div class="intro-title">基本属性</div>
-        <el-descriptions :column="4" border>
-          <el-descriptions-item label="成立日期">—</el-descriptions-item>
-          <el-descriptions-item label="注册地">—</el-descriptions-item>
-          <el-descriptions-item label="注册资本">—</el-descriptions-item>
-          <el-descriptions-item label="实收资本">—</el-descriptions-item>
-          <el-descriptions-item label="企业性质">—</el-descriptions-item>
-          <el-descriptions-item label="监管机关">—</el-descriptions-item>
-          <el-descriptions-item label="高管人员">—</el-descriptions-item>
-          <el-descriptions-item label="法人">—</el-descriptions-item>
-        </el-descriptions>
-      </div>
-      <div class="intro-section">
-        <div class="intro-title">行业属性</div>
-        <el-descriptions :column="4" border>
-          <el-descriptions-item label="生产/贸易/混合型"
-            >—</el-descriptions-item
-          >
-          <el-descriptions-item label="产业类别">{{
-            detailRow.category
-          }}</el-descriptions-item>
-          <el-descriptions-item label="专精特新">—</el-descriptions-item>
-          <el-descriptions-item label="地区">{{
-            detailRow.region
-          }}</el-descriptions-item>
-        </el-descriptions>
-      </div>
-    </div>
-    <template #footer>
-      <el-button @click="detailVisible = false">关闭</el-button>
-    </template>
-  </el-dialog>
-</template>
-
-<style scoped>
 .intro-grid {
   display: flex;
   flex-direction: column;

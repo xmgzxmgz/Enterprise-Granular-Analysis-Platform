@@ -19,10 +19,12 @@
 ## 使用指南
 
 - 环境要求
+
   - Node.js >= 18，npm >= 9
   - macOS（本项目开发环境）
 
 - 安装与启动
+
   ```bash
   # 安装依赖
   npm install
@@ -41,6 +43,7 @@
   ```
 
 - 项目结构（关键目录）
+
   ```text
   src/
     components/         # 通用组件（SidebarMenu、AppHeader、HeroAnimation 等）
@@ -52,7 +55,8 @@
   ```
 
 - 路由与页面
-  - 首页：`/home`（苹果风入场动画）
+
+  - 首页：`/home`
   - 分类主题管理：`/theme-management`
     - 企业出口风险分类/敏感物品管控/两用物项：`/theme-management/出口风险分类/敏感物品管控/两用物项`
   - 企业分类评级画像：`/rating-profile`
@@ -61,11 +65,13 @@
     - 标签管理/切面分析：`/rating-profile/标签管理/切面分析`
 
 - 全局搜索与导航
+
   - 全局搜索框位于面包屑正下方，支持回车跳转到匹配页面。
   - 面包屑基于 `route.matched` 生成，可点击任意级返回对应页面；超长时单行省略。
   - 侧边栏顶部提供“返回主页面”按钮，一键回到 `/home`。
 
 - 主题与亮度
+
   - 自动亮度切换：根据系统偏好与时间段自动设置浅/深色（`useAutoTheme`）。
   - 蓝色科技主题：统一色板与阴影，保证观感一致。
 
@@ -76,21 +82,15 @@
 ### API 文档与使用示例（前端接口）
 
 - 组合式函数：`useAutoTheme`
-  ```ts
-  import { useAutoTheme } from '@/composables/useAutoTheme'
-  // 在应用入口初始化，自动根据系统与时段切换主题
-  useAutoTheme()
-  ```
 
-- 组件接口：`HeroAnimation`
-  ```vue
-  <template>
-    <HeroAnimation />
-  </template>
-  <!-- 首次进入展示苹果风入场动画，随后淡出并记录到 sessionStorage，不重复播放 -->
+  ```ts
+  import { useAutoTheme } from "@/composables/useAutoTheme";
+  // 在应用入口初始化，自动根据系统与时段切换主题
+  useAutoTheme();
   ```
 
 - 搜索与导航交互
+
   ```vue
   <!-- AppHeader 中的搜索框支持回车触发页面跳转或聚合搜索逻辑 -->
   <el-input v-model="keyword" @keyup.enter="onSearch" />
@@ -99,9 +99,12 @@
 - 路由懒加载示例
   ```ts
   const routes = [
-    { path: '/home', component: () => import('@/views/Home.vue') },
-    { path: '/rating-profile/基本信息', component: () => import('@/views/Rating/BasicInfo.vue') },
-  ]
+    { path: "/home", component: () => import("@/views/Home.vue") },
+    {
+      path: "/rating-profile/基本信息",
+      component: () => import("@/views/Rating/BasicInfo.vue"),
+    },
+  ];
   ```
 
 ### 常见问题与故障排除
@@ -120,12 +123,14 @@
 ## 未来规划
 
 - 短期路线图（1–2 迭代）
+
   - 全局搜索增强：下拉建议、模糊匹配与拼音支持。
   - 路由面包屑滚动优化：长链路横向滚动替代省略。
   - 图表主题统一：浅/深色图表主题适配与动画优化。
   - 构建性能：按需分包与 `manualChunks` 优化，降低体积提示。
 
 - 长期路线图（3+ 迭代）
+
   - 数据源接入：后端 API 对接与真实数据驱动。
   - 权限与审计：角色权限、操作日志与安全合规。
   - 国际化与可访问性：i18n 支持与无障碍优化。
@@ -133,6 +138,7 @@
   - 测试与质量保障：单元测试、端到端测试与 CI。
 
 - 新功能与改进点
+
   - 首页动画可配置化与品牌主题扩展。
   - 标签体系增强：组合筛选、权重设定与可视化矩阵。
   - 建模流程：参数面板、训练任务管理与结果归档。
