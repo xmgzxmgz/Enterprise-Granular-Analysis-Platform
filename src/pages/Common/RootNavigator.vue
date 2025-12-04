@@ -53,80 +53,81 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { useRouter } from "vue-router";
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps<{
-  basePath: string;
-  title: string;
-  subTitle?: string;
-  panelTitle?: string;
-}>();
+  basePath: string
+  title: string
+  subTitle?: string
+  panelTitle?: string
+}>()
 
-type Node = { label: string; fullPath: string; children: Record<string, Node> };
-type TreeItem = { label: string; fullPath: string; children?: TreeItem[] };
+type Node = { label: string; fullPath: string; children: Record<string, Node> }
+type TreeItem = { label: string; fullPath: string; children?: TreeItem[] }
 
-const router = useRouter();
+const router = useRouter()
 
 const buildTree = (base: string) => {
-  const root: Node = { label: base, fullPath: base, children: {} };
-  const all = router.getRoutes();
-  const byPath = new Map(all.map((r) => [r.path, r]));
+  const root: Node = { label: base, fullPath: base, children: {} }
+  const all = router.getRoutes()
+  const byPath = new Map(all.map((r) => [r.path, r]))
   for (const r of all) {
-    const p = r.path;
-    if (!p.startsWith(base + "/")) continue;
-    const rest = p.substring(base.length + 1);
-    if (!rest) continue;
-    const segs = rest.split("/").filter(Boolean);
-    let cur = root;
-    let curPath = base;
+    const p = r.path
+    if (!p.startsWith(base + '/')) continue
+    const rest = p.substring(base.length + 1)
+    if (!rest) continue
+    const segs = rest.split('/').filter(Boolean)
+    let cur = root
+    let curPath = base
     for (const s of segs) {
-      curPath = curPath + "/" + s;
-      const rec = byPath.get(curPath);
-      const label = (rec?.name as string) || s;
+      curPath = curPath + '/' + s
+      const rec = byPath.get(curPath)
+      const label = (rec?.name as string) || s
       cur.children[s] = cur.children[s] || {
         label,
         fullPath: curPath,
-        children: {},
-      };
-      cur = cur.children[s];
+        children: {}
+      }
+      cur = cur.children[s]
     }
   }
-  return root;
-};
+  return root
+}
 
 const toArray = (n: Node): TreeItem[] => {
-  const list: TreeItem[] = [];
+  const list: TreeItem[] = []
   for (const child of Object.values(n.children)) {
-    const item: TreeItem = { label: child.label, fullPath: child.fullPath };
-    const sub = toArray(child);
-    if (sub.length) item.children = sub;
-    list.push(item);
+    const item: TreeItem = { label: child.label, fullPath: child.fullPath }
+    const sub = toArray(child)
+    if (sub.length) item.children = sub
+    list.push(item)
   }
-  return list;
-};
+  return list
+}
 
-const treeData = computed(() => toArray(buildTree(props.basePath)));
+const treeData = computed(() => toArray(buildTree(props.basePath)))
 const subTitle = computed(() => {
-  if (props.subTitle) return props.subTitle;
-  return props.basePath === "/theme-management"
-    ? "出口风险分类、敏感物品、跨境电商"
-    : "企业基本信息、标签管理与分析";
-});
+  if (props.subTitle) return props.subTitle
+  return props.basePath === '/theme-management'
+    ? '出口风险分类、敏感物品、跨境电商'
+    : '企业基本信息、标签管理与分析'
+})
 
 const onNodeClick = (data: any) => {
-  if (!data.children || !data.children.length) router.push(data.fullPath);
-};
+  if (!data.children || !data.children.length) router.push(data.fullPath)
+}
 
 const jumpTargets = new Set([
-  "/theme-management/export-risk/sensitive-items/dual-use",
-  "/theme-management/export-risk/key-items/frozen-fish",
-  "/theme-management/export-risk/cross-border-sensitive-distribution/frequency-assign",
-]);
-const isJumpNode = (p: string) => jumpTargets.has(p);
-const go = (p: string, tab: "modeling" | "tuning" | "publish") => {
-  router.push({ path: p, query: { tab } });
-};
+  '/theme-management/export-risk/sensitive-items/dual-use',
+  '/theme-management/export-risk/key-items/frozen-fish',
+  '/theme-management/export-risk/cross-border-sensitive-distribution/frequency-assign',
+  '/theme-management/policy-benefits'
+])
+const isJumpNode = (p: string) => jumpTargets.has(p)
+const go = (p: string, tab: 'modeling' | 'tuning' | 'publish') => {
+  router.push({ path: p, query: { tab } })
+}
 </script>
 
 <style scoped>

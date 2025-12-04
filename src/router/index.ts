@@ -13,12 +13,12 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/theme-management',
-    name: '分类主题管理',
     component: () => import('@/pages/Theme/Index.vue'),
     meta: { breadcrumb: ['分类主题管理'] },
     children: [
       {
         path: '',
+        name: '分类主题管理',
         component: () => import('@/pages/Common/RootNavigator.vue'),
         props: { basePath: '/theme-management', title: '分类主题管理' }
       },
@@ -99,12 +99,12 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/rating-profile',
-    name: '企业分类评级画像',
     component: () => import('@/pages/Rating/Index.vue'),
     meta: { breadcrumb: ['企业分类评级画像'] },
     children: [
       {
         path: '',
+        name: '企业分类评级画像',
         component: () => import('@/pages/Common/RootNavigator.vue'),
         props: { basePath: '/rating-profile', title: '企业分类评级画像' }
       },
@@ -155,6 +155,13 @@ const routes: RouteRecordRaw[] = [
         meta: { breadcrumb: ['企业分类评级画像', '企业详情'] }
       }
     ]
+  },
+  // 兼容历史代码中的中文路径跳转（别名路由）
+  {
+    path: '/rating-profile/标签管理/标签企业列表',
+    name: '标签企业列表',
+    component: () => import('@/pages/Rating/Tags/EnterpriseList.vue'),
+    meta: { breadcrumb: ['企业分类评级画像', '标签管理', '标签企业列表'] }
   }
 ]
 

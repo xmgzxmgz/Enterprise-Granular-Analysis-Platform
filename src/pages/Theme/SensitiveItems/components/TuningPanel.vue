@@ -8,7 +8,7 @@
         :default-openeds="defaultOpeneds"
         @select="onSelect"
       >
-        <el-menu-item index="topic">主题视角</el-menu-item>
+        <el-menu-item index="topic">切面视角</el-menu-item>
         <el-sub-menu index="params">
           <template #title>
             <div class="params-title">
@@ -129,7 +129,7 @@
       </div>
 
       <div v-else-if="active === 'topic'" class="card">
-        <div class="title">主题视角</div>
+        <div class="title">切面视角</div>
         <div class="visual-wrap">
           <div ref="abcPieRef" class="chart" />
           <div ref="radarRef" class="chart" />
@@ -143,7 +143,7 @@
                 size="small"
                 style="width: 200px"
               >
-                <el-option v-for="f in features" :key="f.name" :label="f.name" :value="f.name" />
+                <el-option v-for="f in featuresSorted" :key="f" :label="f" :value="f" />
               </el-select>
             </div>
             <div ref="visualBoxRef" class="chart" />
@@ -211,6 +211,9 @@
               style="width: 360px"
             ></el-input>
             <el-button size="small" type="primary" @click="openFieldFilter">字段筛选</el-button>
+            <el-button size="small" type="success" :loading="loadingAll" @click="fetchAllData"
+              >获取全部数据</el-button
+            >
           </div>
         </div>
         <div class="table-scroll" style="height: 100%">
@@ -231,6 +234,8 @@
               :label="col.label"
               :width="colWidth(col.key)"
               :show-overflow-tooltip="true"
+              :class-name="columnClass(col.key)"
+              :label-class-name="columnClass(col.key)"
               sortable
             >
               <template #header>
@@ -262,6 +267,15 @@
               </template>
             </el-table-column>
           </el-table>
+          <div class="pagination-wrap">
+            <el-pagination
+              :current-page="uiPage"
+              :page-size="size"
+              :total="totalFiltered"
+              layout="prev, pager, next, total"
+              @current-change="onUiPageChange"
+            />
+          </div>
         </div>
         <el-dialog
           v-model="columnFilterDialogVisible"
@@ -284,9 +298,12 @@
             }"
           >
             <el-checkbox-group v-model="colCheckedValues[colDialogKey]">
-              <el-checkbox v-for="opt in colDialogOptionsSorted" :key="opt" :label="opt">{{
-                opt
-              }}</el-checkbox>
+              <el-checkbox
+                v-for="opt in colDialogOptionsSorted"
+                :key="opt.value"
+                :label="opt.value"
+                >{{ opt.label }}</el-checkbox
+              >
             </el-checkbox-group>
           </div>
           <template #footer>
@@ -338,13 +355,13 @@
         </div>
         <div class="feature-wrap">
           <div class="importance-chart">
-            <div ref="importanceRef" class="chart" />
+            <iframe src="/SHAP_Feature_Importance_Top_20.html" class="chart" />
           </div>
           <div class="feature-list">
             <el-checkbox-group v-model="checkedFeatures">
-              <div v-for="f in featuresSorted" :key="f.name" class="feature-item">
-                <el-checkbox :label="f.name" />
-                <span class="fname-btn" @click="openFeature(f)">{{ f.name }}</span>
+              <div v-for="f in featuresSorted" :key="f" class="feature-item">
+                <el-checkbox :label="f" />
+                <span class="fname-btn" @click="openFeature(f)">{{ f }}</span>
               </div>
             </el-checkbox-group>
           </div>
@@ -448,7 +465,7 @@
                 size="small"
                 style="width: 200px"
               >
-                <el-option v-for="f in features" :key="f.name" :label="f.name" :value="f.name" />
+                <el-option v-for="f in featuresSorted" :key="f" :label="f" :value="f" />
               </el-select>
             </div>
             <div ref="visualBoxRef" class="chart" />
@@ -534,7 +551,34 @@ const goStep = (i: number) => {
   stepIndex.value = i
   active.value = steps.value[i]
 }
+const passedFilterValues = ref<Record<string, string[]>>({})
+const passedFilterRows = ref<any[]>([])
+const passedFieldKeys = ref<string[]>([])
 const nextStep = () => {
+  if (stepIndex.value === 0) {
+    const snap = Object.fromEntries(
+      Object.entries(colCheckedValues)
+        .filter(([, v]) => (v || []).length)
+        .map(([k, v]) => [k, [...(v || [])]])
+    )
+    passedFilterValues.value = snap
+    passedFilterRows.value = [...(tableRows.value as any[])]
+    passedFieldKeys.value = [...checkedColumns.value]
+    if (!selectedEnterprises.value.length) {
+      const names = Array.from(
+        new Set(
+          passedFilterRows.value
+            .map((r: any) =>
+              String(
+                (r as any)['Consignee Enterprise'] ?? (r as any).etps_name ?? (r as any).name ?? ''
+              )
+            )
+            .filter((s: string) => !!s)
+        )
+      )
+      selectedEnterprises.value = names
+    }
+  }
   if (stepIndex.value < steps.value.length - 1) goStep(stepIndex.value + 1)
 }
 const prevStep = () => {
@@ -735,9 +779,13 @@ const renderBox = () => {
 const filterKeyword = ref('')
 const rows = reactive<Record<string, any>[]>([])
 const filteredRows = ref(rows)
+const uiPage = ref(1)
+const onUiPageChange = (p: number) => (uiPage.value = p)
+const loadingAll = ref(false)
 const columnFilterVisible = reactive<Record<string, boolean>>({})
 const colCheckedValues = reactive<Record<string, string[]>>({})
 const colFilterOptions = reactive<Record<string, string[]>>({})
+const colFilterCounts = reactive<Record<string, Record<string, number>>>({})
 const columnFilterDialogVisible = ref(false)
 const colDialogKey = ref<string>('')
 const colDialogTitle = computed(() => {
@@ -748,12 +796,20 @@ const colDialogTitle = computed(() => {
 const colDialogSearch = ref('')
 const colDialogOptionsSorted = computed(() => {
   const key = colDialogKey.value
-  const opts = colFilterOptions[key] || []
   const q = colDialogSearch.value.trim().toLowerCase()
+  const counts = colFilterCounts[key] || {}
+  const opts = Object.keys(counts)
   const filtered = q ? opts.filter((o) => String(o).toLowerCase().includes(q)) : opts
-  return [...filtered].sort(
-    (a, b) => String(a).length - String(b).length || String(a).localeCompare(String(b))
-  )
+  return filtered
+    .map((v) => ({
+      value: v,
+      count: counts[v] || 0,
+      label: `${v}${counts[v] ? ` [${counts[v]}]` : ''}`
+    }))
+    .sort(
+      (a, b) =>
+        b.count - a.count || a.value.length - b.value.length || a.value.localeCompare(b.value)
+    )
 })
 const colDialogCols = computed(() => {
   const n = colDialogOptionsSorted.value.length
@@ -770,7 +826,7 @@ const colDialogMaxHeight = computed(() => {
   const vh = window.innerHeight || 800
   return Math.max(360, Math.floor(vh - 220))
 })
-const tableRows = computed(() => {
+const filteredAll = computed(() => {
   const base = filteredRows.value as any[]
   const keys = Object.keys(colCheckedValues).filter((k) => (colCheckedValues[k] || []).length)
   if (!keys.length) return base
@@ -785,16 +841,36 @@ const tableRows = computed(() => {
     return true
   })
 })
-const openColFilter = (key: string) => {
-  const set = new Set<string>()
+const totalFiltered = computed(() => filteredAll.value.length)
+const tableRows = computed(() => {
+  const start = (uiPage.value - 1) * size.value
+  const end = start + size.value
+  return filteredAll.value.slice(start, end)
+})
+const columnClass = (key: string) =>
+  (colCheckedValues[key] || []).length ? 'col-active-filter' : ''
+const openColFilter = async (key: string) => {
+  await ensureAllDataLoaded()
+  const counts: Record<string, number> = {}
   for (const r of filteredRows.value) {
     const v = (r as any)[key]
-    if (Array.isArray(v)) v.forEach((x) => set.add(String(x ?? '')))
-    else set.add(String(v ?? ''))
+    if (Array.isArray(v)) {
+      for (const x of v) {
+        const s = String(x ?? '')
+        if (!s) continue
+        counts[s] = (counts[s] || 0) + 1
+      }
+    } else {
+      const s = String(v ?? '')
+      if (s) counts[s] = (counts[s] || 0) + 1
+    }
   }
-  colFilterOptions[key] = Array.from(set)
+  colFilterCounts[key] = counts
+  colFilterOptions[key] = Object.keys(counts)
     .filter((s) => s !== '')
-    .sort()
+    .sort(
+      (a, b) => (counts[b] || 0) - (counts[a] || 0) || a.length - b.length || a.localeCompare(b)
+    )
   colDialogKey.value = key
   columnFilterDialogVisible.value = true
   if (!colCheckedValues[key]) colCheckedValues[key] = []
@@ -805,6 +881,7 @@ const resetColFilter = (key: string) => {
 }
 const confirmColFilter = (key: string) => {
   columnFilterDialogVisible.value = false
+  uiPage.value = 1
 }
 const selectAllColFilter = (key: string) => {
   colCheckedValues[key] = [...(colFilterOptions[key] || [])]
@@ -820,7 +897,7 @@ const onSelectionChange = (sel: any[]) => {
   generateAggStats()
 }
 const toBasic = (row: any) => {
-  const name = row?.etps_name || (row as any)?.etpsName
+  const name = (row as any)['Consignee Enterprise']
   if (!name) return
   router.push({ name: '企业基本信息', query: { focusName: name } })
 }
@@ -828,57 +905,153 @@ const toBasic = (row: any) => {
 const page = ref(0)
 const size = ref(20)
 const total = ref(0)
+const loadedPages = ref<Set<number>>(new Set<number>())
 const canonicalMap: Record<string, string> = {
-  etpsName: 'etps_name',
-  industryPhyName: 'industry_phy_name',
-  industryCodeName: 'industry_code_name',
-  areaId: 'area_id',
-  existStatus: 'exist_status',
-  commonBusi: 'common_busi',
-  importRatio: 'import_ratio',
-  mainCiqCodes: 'main_ciq_codes',
-  mainParentCiq: 'main_parent_ciq',
-  topTradeCountries: 'top_trade_countries',
-  transportMode: 'transport_mode',
-  totalDeclAmt: 'total_decl_amt',
-  totalEntryCnt: 'total_entry_cnt',
-  avgTicketVal: 'avg_ticket_val',
-  aeoRating: 'aeo_rating',
-  delayRate: 'delay_rate'
+  regulatory_authority: 'Regulatory Authority',
+  registration_location: 'Registration Location',
+  enterprise_type_nature: 'Enterprise Type (Nature)',
+  enterprise_type_industry: 'Enterprise Type (Industry)',
+  industry_category: 'Industry Category',
+  customs_broker: 'Customs Broker',
+  consignee_enterprise: 'Consignee Enterprise',
+  number_of_associated_enterprises: 'Number of Associated Enterprises',
+  specialized_refined_unique_new: 'Specialized, Refined, Unique, New',
+  registered_capital: 'Registered Capital (10k CNY)',
+  paid_in_capital: 'Paid-in Capital (10k CNY)',
+  legal_person_risk: 'Legal Person Risk',
+  current_year_import_export_amt: 'Current Year Import/Export Amount (10k CNY)',
+  past_three_years_import_export_amt: 'Past Three Years Import/Export Amount (10k CNY)',
+  current_year_import_export_growth_rate: 'Current Year Import/Export Growth Rate',
+  current_year_tax_amt: 'Current Year Tax Amount (10k CNY)',
+  past_three_years_tax_amt: 'Past Three Years Tax Amount (10k CNY)',
+  supervision_current_year_import_export_amt:
+    'Supervision_Current Year Import/Export Amount (10k CNY)',
+  supervision_past_three_years_import_export_amt:
+    'Supervision_Past Three Years Import/Export Amount (10k CNY)',
+  supervision_current_year_import_export_growth_rate:
+    'Supervision_Current Year Import/Export Growth Rate',
+  settlement_exchange_rate: 'Settlement Exchange Rate',
+  current_year_customs_enforcement_count: 'Current Year Customs Enforcement Count',
+  previous_year_customs_enforcement_count: 'Previous Year Customs Enforcement Count',
+  current_year_anomaly_count: 'Current Year Anomaly Count',
+  past_three_years_anomaly_count: 'Past Three Years Anomaly Count'
 }
 const normalizeRow = (row: any) => {
   const out: any = { ...row }
-  Object.entries(canonicalMap).forEach(([camel, snake]) => {
-    const v = out[camel]
-    const cur = out[snake]
-    if (
-      v !== undefined &&
-      v !== null &&
-      (cur === undefined || cur === null || String(cur).length === 0)
-    ) {
-      out[snake] = v
+  // 将旧的蛇形别名回填到原始列名（严格大小写与空格）
+  Object.entries(canonicalMap).forEach(([alias, raw]) => {
+    const v = out[alias]
+    const cur = out[raw]
+    if (v !== undefined && v !== null && (cur === undefined || cur === null)) {
+      out[raw] = v
     }
-    delete out[camel]
+    delete out[alias]
   })
-  out.etps_name = out.etps_name || out.name || ''
   return out
 }
 const loadEtps = async () => {
-  const q = filterKeyword.value.trim()
+  const q0 = filterKeyword.value.trim()
+  const pages = [page.value, 0, 1]
+  const queries = [q0, '', undefined]
+  const pickList = (r: any): any[] =>
+    Array.isArray(r)
+      ? r
+      : Array.isArray(r?.rows)
+        ? r.rows
+        : Array.isArray(r?.data)
+          ? r.data
+          : Array.isArray(r?.content)
+            ? r.content
+            : Array.isArray(r?.list)
+              ? r.list
+              : []
+  const pickTotal = (r: any, list: any[]) =>
+    Number(
+      (r && (r.total ?? r.count ?? r.totalElements ?? r.total_count)) ??
+        (Array.isArray(r?.rows) ? r.rows.length : 0) ??
+        (Array.isArray(r?.data) ? r.data.length : 0) ??
+        (Array.isArray(r?.content) ? r.content.length : 0) ??
+        (Array.isArray(r?.list) ? r.list.length : 0) ??
+        (Array.isArray(list) ? list.length : 0)
+    )
   try {
-    const resp = await getEtpsData({ q, page: page.value, size: size.value })
-    const list: any[] = resp?.rows || resp || []
-    const norm = list.map((r) => normalizeRow(r))
+    loadedPages.value.clear()
+    let resp: any = null
+    let list: any[] = []
+    outer: for (const p of pages) {
+      for (const q of queries) {
+        resp = await getEtpsData({ q, page: p, size: size.value })
+        list = pickList(resp)
+        if (list && list.length) {
+          page.value = p
+          loadedPages.value.add(p)
+          break outer
+        }
+      }
+    }
+    const norm = (list || []).map((r: any) => normalizeRow(r))
     rows.splice(0, rows.length, ...norm)
     filteredRows.value = rows
-    total.value = Number(resp?.total || list.length || 0)
+    total.value = pickTotal(resp, list)
     checkedColumns.value = orderKeys(
       allColumns.value.map((c: ColumnDef) => c.key).filter((k) => hasDataKey(k))
     )
-    ElMessage.success('获取企业信息成功')
+    if (norm.length) ElMessage.success('获取企业信息成功')
+    else ElMessage.warning('后端返回空数据')
   } catch (e) {
-    filteredRows.value = [] as any
+    if (!rows.length) filteredRows.value = [] as any
     ElMessage.error('后端无数据或未联通')
+  }
+}
+
+const ensureAllDataLoaded = async () => {
+  const totalCount = total.value || 0
+  const pagesCount = Math.ceil(totalCount / size.value)
+  if (!pagesCount || rows.length >= totalCount) return
+  const q = filterKeyword.value.trim()
+  const need: number[] = []
+  for (let p = 0; p < pagesCount; p++) {
+    if (!loadedPages.value.has(p)) need.push(p)
+  }
+  if (!need.length) return
+  try {
+    const add: any[] = []
+    const CONCURRENCY = 8
+    for (let i = 0; i < need.length; i += CONCURRENCY) {
+      const batch = need.slice(i, i + CONCURRENCY)
+      const resps = await Promise.all(
+        batch.map((p) => getEtpsData({ q, page: p, size: size.value }))
+      )
+      for (const r of resps) {
+        const list = Array.isArray((r as any)?.rows) ? (r as any).rows : Array.isArray(r) ? r : []
+        for (const it of list) add.push(normalizeRow(it))
+      }
+    }
+    const byId: Record<string, any> = {}
+    for (const it of [...rows, ...add]) {
+      const id = String((it as any).item_id ?? '')
+      if (id) byId[id] = it
+    }
+    const merged = Object.values(byId)
+    rows.splice(0, rows.length, ...merged)
+    filteredRows.value = rows
+    need.forEach((p) => loadedPages.value.add(p))
+  } catch {
+    /* ignore */
+  }
+}
+
+const fetchAllData = async () => {
+  if (!total.value) await loadEtps()
+  loadingAll.value = true
+  try {
+    await ensureAllDataLoaded()
+    uiPage.value = 1
+    ElMessage.success(`已获取全部数据，共 ${rows.length} 条`)
+  } catch {
+    ElMessage.error('获取全部数据失败')
+  } finally {
+    loadingAll.value = false
   }
 }
 watch(filterKeyword, () => {
@@ -888,35 +1061,66 @@ watch(filterKeyword, () => {
 // 字段列管理与筛选
 type ColumnDef = { key: string; label: string }
 const baseColumns: ColumnDef[] = [
-  { key: 'etps_name', label: '企业名称' },
-  { key: 'industry_phy_name', label: '行业门类' },
-  { key: 'industry_code_name', label: '行业细分' },
-  { key: 'area_id', label: '区域代码' },
-  { key: 'aeo_rating', label: 'AEO等级' },
-  { key: 'total_decl_amt', label: '申报金额' },
-  { key: 'total_entry_cnt', label: '申报票数' },
-  { key: 'avg_ticket_val', label: '平均票值' },
-  { key: 'delay_rate', label: '延误率' },
-  { key: 'common_busi', label: '业务概述' }
+  { key: 'item_id', label: 'ID' },
+  { key: 'Regulatory Authority', label: '监管部门' },
+  { key: 'Registration Location', label: '注册所在地' },
+  { key: 'Enterprise Type (Nature)', label: '企业类型（性质）' },
+  { key: 'Enterprise Type (Industry)', label: '企业类型（行业）' },
+  { key: 'Industry Category', label: '行业类别' },
+  { key: 'Customs Broker', label: '报关行' },
+  { key: 'Consignee Enterprise', label: '收货企业' },
+  { key: 'Number of Associated Enterprises', label: '关联企业数量' },
+  { key: 'Specialized, Refined, Unique, New', label: '专精特新' },
+  { key: 'Registered Capital (10k CNY)', label: '注册资本（万元）' },
+  { key: 'Paid-in Capital (10k CNY)', label: '实缴资本（万元）' },
+  { key: 'Legal Person Risk', label: '法人风险' },
+  { key: 'Current Year Import/Export Amount (10k CNY)', label: '当年进出口额（万元）' },
+  { key: 'Past Three Years Import/Export Amount (10k CNY)', label: '近三年进出口额（万元）' },
+  { key: 'Current Year Import/Export Growth Rate', label: '当年进出口增长率' },
+  { key: 'Current Year Tax Amount (10k CNY)', label: '当年税额（万元）' },
+  { key: 'Past Three Years Tax Amount (10k CNY)', label: '近三年税额（万元）' },
+  {
+    key: 'Supervision_Current Year Import/Export Amount (10k CNY)',
+    label: '监管-当年进出口额（万元）'
+  },
+  {
+    key: 'Supervision_Past Three Years Import/Export Amount (10k CNY)',
+    label: '监管-近三年进出口额（万元）'
+  },
+  { key: 'Supervision_Current Year Import/Export Growth Rate', label: '监管-当年进出口增长率' },
+  { key: 'Settlement Exchange Rate', label: '结算汇率' },
+  { key: 'Current Year Customs Enforcement Count', label: '当年海关执法次数' },
+  { key: 'Previous Year Customs Enforcement Count', label: '上年海关执法次数' },
+  { key: 'Current Year Anomaly Count', label: '当年异常次数' },
+  { key: 'Past Three Years Anomaly Count', label: '近三年异常次数' }
 ]
 const preferredOrder = [
-  'id',
-  'etps_name',
-  'industry_phy_name',
-  'industry_code_name',
-  'area_id',
-  'exist_status',
-  'common_busi',
-  'import_ratio',
-  'main_ciq_codes',
-  'main_parent_ciq',
-  'top_trade_countries',
-  'transport_mode',
-  'total_decl_amt',
-  'total_entry_cnt',
-  'avg_ticket_val',
-  'aeo_rating',
-  'delay_rate'
+  'item_id',
+  'Regulatory Authority',
+  'Registration Location',
+  'Enterprise Type (Nature)',
+  'Enterprise Type (Industry)',
+  'Industry Category',
+  'Customs Broker',
+  'Consignee Enterprise',
+  'Number of Associated Enterprises',
+  'Specialized, Refined, Unique, New',
+  'Registered Capital (10k CNY)',
+  'Paid-in Capital (10k CNY)',
+  'Legal Person Risk',
+  'Current Year Import/Export Amount (10k CNY)',
+  'Past Three Years Import/Export Amount (10k CNY)',
+  'Current Year Import/Export Growth Rate',
+  'Current Year Tax Amount (10k CNY)',
+  'Past Three Years Tax Amount (10k CNY)',
+  'Supervision_Current Year Import/Export Amount (10k CNY)',
+  'Supervision_Past Three Years Import/Export Amount (10k CNY)',
+  'Supervision_Current Year Import/Export Growth Rate',
+  'Settlement Exchange Rate',
+  'Current Year Customs Enforcement Count',
+  'Previous Year Customs Enforcement Count',
+  'Current Year Anomaly Count',
+  'Past Three Years Anomaly Count'
 ]
 const allColumns = computed<ColumnDef[]>(() => {
   const keys = new Set(baseColumns.map((c) => c.key))
@@ -929,23 +1133,33 @@ const allColumns = computed<ColumnDef[]>(() => {
       baseColumns.find((b) => b.key === k)?.label ||
       (
         {
-          id: 'ID',
-          etps_name: '企业名称',
-          industry_phy_name: '行业门类',
-          industry_code_name: '行业细分',
-          area_id: '区域代码',
-          exist_status: '存在状态',
-          common_busi: '业务概述',
-          import_ratio: '进口比率',
-          main_ciq_codes: '主要检验检疫代码',
-          main_parent_ciq: '主要上级检验检疫',
-          top_trade_countries: '主要贸易国家',
-          transport_mode: '运输方式',
-          total_decl_amt: '申报金额',
-          total_entry_cnt: '申报票数',
-          avg_ticket_val: '平均票值',
-          aeo_rating: 'AEO等级',
-          delay_rate: '延误率'
+          item_id: 'ID',
+          'Regulatory Authority': '监管部门',
+          'Registration Location': '注册所在地',
+          'Enterprise Type (Nature)': '企业类型（性质）',
+          'Enterprise Type (Industry)': '企业类型（行业）',
+          'Industry Category': '行业类别',
+          'Customs Broker': '报关行',
+          'Consignee Enterprise': '收货企业',
+          'Number of Associated Enterprises': '关联企业数量',
+          'Specialized, Refined, Unique, New': '专精特新',
+          'Registered Capital (10k CNY)': '注册资本（万元）',
+          'Paid-in Capital (10k CNY)': '实缴资本（万元）',
+          'Legal Person Risk': '法人风险',
+          'Current Year Import/Export Amount (10k CNY)': '当年进出口额（万元）',
+          'Past Three Years Import/Export Amount (10k CNY)': '近三年进出口额（万元）',
+          'Current Year Import/Export Growth Rate': '当年进出口增长率',
+          'Current Year Tax Amount (10k CNY)': '当年税额（万元）',
+          'Past Three Years Tax Amount (10k CNY)': '近三年税额（万元）',
+          'Supervision_Current Year Import/Export Amount (10k CNY)': '监管-当年进出口额（万元）',
+          'Supervision_Past Three Years Import/Export Amount (10k CNY)':
+            '监管-近三年进出口额（万元）',
+          'Supervision_Current Year Import/Export Growth Rate': '监管-当年进出口增长率',
+          'Settlement Exchange Rate': '结算汇率',
+          'Current Year Customs Enforcement Count': '当年海关执法次数',
+          'Previous Year Customs Enforcement Count': '上年海关执法次数',
+          'Current Year Anomaly Count': '当年异常次数',
+          'Past Three Years Anomaly Count': '近三年异常次数'
         } as Record<string, string>
       )[k] ||
       k
@@ -998,52 +1212,69 @@ const invertColumns = () => {
 const confirmColumns = () => (fieldFilterVisible.value = false)
 
 onMounted(() => {
+  enableVersion('v1')
   loadEtps()
 })
 
-const features = reactive(
-  Array.from({ length: 20 }, (_, i) => {
-    const names = [
-      '出口量',
-      '出口频次',
-      '交易金额',
-      '物流时长',
-      '商品类别',
-      '目的地区',
-      '退货率',
-      '异常记录次数',
-      '合规事件数',
-      '供应商数量',
-      '买家数量',
-      '订单均值',
-      '发票均值',
-      '清关耗时',
-      '申报差异',
-      '运费均值',
-      '温控偏差',
-      '破损率',
-      '库存周转',
-      '历史违规'
-    ]
-    const name = names[i % names.length] + (i >= names.length ? `-${i - names.length + 1}` : '')
-    const min = Math.floor(10 + Math.random() * 50)
-    const max = min + Math.floor(50 + Math.random() * 200)
-    const low = Math.floor(min + (max - min) * 0.25)
-    const mid = Math.floor(min + (max - min) * 0.5)
-    const high = Math.floor(min + (max - min) * 0.8)
-    return { name, min, max, low, mid, high }
-  })
-)
 const checkedFeatures = ref<string[]>([])
-const activeFeature = ref<string>(features[0].name)
-const curStats = ref(features[0])
-const curRange = ref<[number, number]>([curStats.value.min, curStats.value.max])
+const selectedFields = computed(() => {
+  const keys = passedFieldKeys.value.length
+    ? passedFieldKeys.value
+    : Object.keys(passedFilterValues.value).filter(
+        (k) => (passedFilterValues.value[k] || []).length
+      )
+  return keys
+})
 const featuresSorted = computed(() => {
-  return [...features].sort(
-    (a, b) =>
-      String(b.name).length - String(a.name).length || String(a.name).localeCompare(String(b.name))
+  const counts = passedFilterValues.value
+  return [...selectedFields.value].sort(
+    (a, b) => (counts[b]?.length || 0) - (counts[a]?.length || 0) || a.localeCompare(b)
   )
 })
+const activeFeature = ref<string>('')
+const curStats = ref<any>({ name: '', min: 0, max: 0, low: 0, mid: 0, high: 0 })
+const curRange = ref<[number, number]>([0, 0])
+const featureCounts = computed(() => {
+  const data = (
+    passedFilterRows.value && passedFilterRows.value.length
+      ? passedFilterRows.value
+      : filteredRows.value
+  ) as any[]
+  const keys = checkedFeatures.value.length ? checkedFeatures.value : selectedFields.value
+  const result: { name: string; count: number }[] = []
+  for (const k of keys) {
+    const set = new Set<string>()
+    for (const r of data) {
+      const v = (r as any)[k]
+      if (Array.isArray(v)) v.forEach((x) => set.add(String(x ?? '')))
+      else set.add(String(v ?? ''))
+    }
+    const cnt = Array.from(set).filter((s) => s !== '').length
+    result.push({ name: k, count: cnt })
+  }
+  return result.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+})
+const renderFeatureCounts = () => {
+  if (!featureRef.value) return
+  const chart = echarts.init(featureRef.value)
+  const cats = featureCounts.value.map((i) => i.name)
+  const data = featureCounts.value.map((i) => i.count)
+  const option = {
+    title: { text: '选中字段的唯一值数量分布', left: 'center' },
+    grid: { left: 100, right: 20, top: 40, bottom: 40 },
+    xAxis: { type: 'category', data: cats },
+    yAxis: { type: 'value', name: '数量' },
+    series: [{ type: 'bar', data, itemStyle: { color: '#3b82f6' } }],
+    tooltip: { trigger: 'axis' }
+  }
+  chart.setOption(option)
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
+  return () => {
+    window.removeEventListener('resize', onResize)
+    chart.dispose()
+  }
+}
 const featureAggStats = ref<
   Record<string, { min: number; max: number; low: number; mid: number; high: number }>
 >({})
@@ -1051,36 +1282,26 @@ const hash = (s: string) => s.split('').reduce((a, c) => (a * 131 + c.charCodeAt
 const generateAggStats = () => {
   const map: Record<string, { min: number; max: number; low: number; mid: number; high: number }> =
     {}
-  for (const f of features) {
-    const mins: number[] = []
-    const maxs: number[] = []
-    const meds: number[] = []
-    const names = selectedEnterprises.value.length
-      ? selectedEnterprises.value
-      : ['华北电力集团', '北京首钢集团', '上海电气股份有限公司']
-    for (const n of names) {
-      const seed = hash(n + f.name)
-      const min = f.min + (seed % 20)
-      const max = f.max - (seed % 15)
-      const mid = Math.floor((min + max) / 2)
-      mins.push(min)
-      maxs.push(max)
-      meds.push(mid)
-    }
-    const min = Math.min(...mins)
-    const max = Math.max(...maxs)
-    const mid = Math.floor(meds.reduce((a, b) => a + b, 0) / meds.length)
-    const low = Math.floor(min + (mid - min) * 0.5)
-    const high = Math.floor(mid + (max - mid) * 0.6)
-    map[f.name] = { min, max, low, mid, high }
+  for (const key of selectedFields.value) {
+    const vals = passedFilterRows.value
+      .map((r: any) => Number((r as any)[key]))
+      .filter((v) => !Number.isNaN(v))
+    if (!vals.length) continue
+    const sorted = [...vals].sort((a, b) => a - b)
+    const min = sorted[0]
+    const max = sorted[sorted.length - 1]
+    const mid = sorted[Math.floor(sorted.length / 2)]
+    const low = sorted[Math.floor(sorted.length * 0.25)]
+    const high = sorted[Math.floor(sorted.length * 0.75)]
+    map[key] = { min, max, low, mid, high }
   }
   featureAggStats.value = map
 }
-const openFeature = (f: any) => {
-  activeFeature.value = f.name
-  const s = featureAggStats.value[f.name] || f
+const openFeature = (f: string) => {
+  activeFeature.value = f
+  const s = featureAggStats.value[f] || { name: f, min: 0, max: 0, low: 0, mid: 0, high: 0 }
   curStats.value = {
-    name: f.name,
+    name: f,
     min: s.min,
     max: s.max,
     low: s.low,
@@ -1089,8 +1310,7 @@ const openFeature = (f: any) => {
   } as any
   curRange.value = [s.min, s.max]
   setTimeout(() => {
-    const d = renderFeature()
-    if (d) disposers.push(d)
+    // 已将特征图替换为表格，此处无需再渲染图表
   }, 0)
 }
 const onRangeChange = () => {
@@ -1106,78 +1326,12 @@ const onRangeChange = () => {
     high: right
   } as any
   setTimeout(() => {
-    const d = renderFeature()
-    if (d) disposers.push(d)
+    // 特征图已替换为表格，不再渲染图表
   }, 0)
 }
-const renderFeature = () => {
-  if (!featureRef.value) return
-  const chart = echarts.init(featureRef.value)
-  const s = curStats.value
-  const bins = 20
-  const step = (s.max - s.min) / bins
-  const xs = Array.from({ length: bins }, (_, i) => Math.round(s.min + step * i))
-  const data = xs.map((x) => {
-    const center = s.mid
-    const dist = Math.abs(x - center) / (s.max - s.min)
-    return Math.max(2, Math.round(20 * Math.exp(-6 * dist)))
-  })
-  const inRange = (x: number) => x >= curRange.value[0] && x <= curRange.value[1]
-  const option = {
-    title: { text: `${activeFeature.value} 分布与筛选`, left: 'center' },
-    grid: { left: 40, right: 20, top: 50, bottom: 40 },
-    xAxis: { type: 'category', data: xs },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        type: 'bar',
-        data: data,
-        itemStyle: {
-          color: (p: any) => (inRange(xs[p.dataIndex]) ? '#3b82f6' : '#93c5fd')
-        }
-      },
-      {
-        type: 'scatter',
-        data: [s.low, s.mid, s.high].map((v) => [v, Math.max(...data) * 0.9]),
-        symbolSize: 10,
-        itemStyle: { color: '#1d4ed8' }
-      }
-    ],
-    tooltip: { trigger: 'axis' }
-  }
-  chart.setOption(option)
-  const onResize = () => chart.resize()
-  window.addEventListener('resize', onResize)
-  return () => {
-    window.removeEventListener('resize', onResize)
-    chart.dispose()
-  }
-}
 
-const renderImportance = () => {
-  if (!importanceRef.value) return
-  const chart = echarts.init(importanceRef.value)
-  const cats = features.map((f) => f.name)
-  const data = features.map((f, i) => Number((0.15 * Math.exp(-i / 6)).toFixed(3)))
-  const option = {
-    title: { text: 'SHAP Feature Importance (Top 20 Feat)', left: 'center' },
-    grid: { left: 180, right: 20, top: 40, bottom: 30 },
-    xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: cats },
-    series: [{ type: 'bar', data, itemStyle: { color: '#3b82f6' } }],
-    tooltip: { trigger: 'axis' }
-  }
-  chart.setOption(option)
-  const onResize = () => chart.resize()
-  window.addEventListener('resize', onResize)
-  return () => {
-    window.removeEventListener('resize', onResize)
-    chart.dispose()
-  }
-}
-
-const kOptions = [1, 2, 3, 4, 5]
-const checkedK = ref<number[]>([1, 2, 3, 4, 5])
+const kOptions = [2, 3, 4, 5]
+const checkedK = ref<number[]>([2, 3, 4, 5])
 const renderClass = () => {
   if (!classRef.value) return
   const chart = echarts.init(classRef.value)
@@ -1217,7 +1371,7 @@ const renderRadar = () => {
   const chart = echarts.init(radarRef.value)
   const feats = checkedFeatures.value.length
     ? checkedFeatures.value
-    : features.slice(0, 6).map((f) => f.name)
+    : featuresSorted.value.slice(0, 6)
   const indicators = feats.map((n) => ({ name: n, max: 100 }))
   const makeVals = (seed: number) =>
     indicators.map((_, i) => Math.max(30, Math.min(95, Math.round(60 + 15 * Math.sin(seed + i)))))
@@ -1460,8 +1614,8 @@ const finished = ref(false)
 const updatedScores = ref<any[]>([])
 const reset = () => {
   filterKeyword.value = ''
-  checkedFeatures.value = features.map((f) => f.name)
-  checkedK.value = [1, 2, 3, 4, 5]
+  checkedFeatures.value = [...featuresSorted.value]
+  checkedK.value = [2, 3, 4, 5]
 }
 const finish = () => {
   if (!filteredRows.value.length) {
@@ -1488,10 +1642,8 @@ const mountCharts = async () => {
     const d3 = renderBox()
     if (d3) disposers.push(d3)
   } else if (active.value.endsWith('feature')) {
-    const d1 = renderImportance()
-    if (d1) disposers.push(d1)
-    const d2 = renderFeature()
-    if (d2) disposers.push(d2)
+    const d = renderFeatureCounts()
+    if (d) disposers.push(d)
   } else if (active.value.endsWith('class')) {
     const d = renderClass()
     if (d) disposers.push(d)
@@ -1523,7 +1675,7 @@ const mountCharts = async () => {
 
 onMounted(async () => {
   await loadEtps()
-  boxMetric.value = features[0]?.name || ''
+  boxMetric.value = featuresSorted.value[0] || ''
   mountCharts()
   updateToolbarWidth()
   updateFloatingFooter()
@@ -1551,6 +1703,9 @@ watch(active, () => {
 })
 watch(checkedK, () => {
   if (active.value.endsWith('class')) setTimeout(mountCharts, 0)
+})
+watch(checkedFeatures, () => {
+  if (active.value.endsWith('feature')) setTimeout(mountCharts, 0)
 })
 watch(distChartType, () => {
   if (active.value === 'dualuse') setTimeout(mountCharts, 0)
@@ -1806,6 +1961,17 @@ onUnmounted(() => {
 }
 .table-wrap :deep(.el-table th .cell) {
   padding: 3px 6px;
+}
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 0;
+}
+.table-wrap :deep(.el-table__header th.col-active-filter) {
+  background: rgba(147, 197, 253, 0.35) !important;
+}
+.table-wrap :deep(.el-table__body td.col-active-filter) {
+  background: rgba(147, 197, 253, 0.15);
 }
 .field-grid {
   display: grid;

@@ -9,6 +9,7 @@
       clearable
       trigger-on-focus
       :debounce="80"
+      highlight-first-item
       @select="onSelectSuggestion"
       @keyup.enter="onSearch"
     />
@@ -22,20 +23,53 @@ import { useRouter } from 'vue-router'
 import { getEtpsData } from '@/services/api'
 
 const localKeyword = ref('')
+const etpsCache = ref<string[]>([])
+let seq = 0
 const router = useRouter()
 
 const fetchSuggestions = async (q: string, cb: (list: { value: string }[]) => void) => {
+  const id = ++seq
+  const k = q.trim()
   try {
-    const resp = await getEtpsData({ q: q.trim(), size: 10 })
+    const resp = await getEtpsData({ q: k, size: 20 })
     const rows: any[] = resp?.rows || resp || []
-    const list = rows
-      .map((r) => String((r as any).etps_name || (r as any).name || ''))
+    let names = rows
+      .map((r) =>
+        String(
+          (r as any).etps_name ||
+            (r as any).etpsName ||
+            (r as any).consignee_enterprise ||
+            (r as any).name ||
+            ''
+        )
+      )
       .filter((n) => !!n)
+    if (!names.length) {
+      if (!etpsCache.value.length) {
+        const all = await getEtpsData({ q: '', size: 100 })
+        const aRows: any[] = all?.rows || all || []
+        etpsCache.value = aRows
+          .map((r) =>
+            String(
+              (r as any).etps_name ||
+                (r as any).etpsName ||
+                (r as any).consignee_enterprise ||
+                (r as any).name ||
+                ''
+            )
+          )
+          .filter((n) => !!n)
+      }
+      names = etpsCache.value.filter((n) => (!k ? true : n.includes(k)))
+    }
+    if (id !== seq) return
+    cb(names.slice(0, 10).map((n) => ({ value: n })))
+  } catch {
+    const fallback = etpsCache.value
+      .filter((n) => (!k ? true : n.includes(k)))
       .slice(0, 10)
       .map((n) => ({ value: n }))
-    cb(list)
-  } catch {
-    cb([])
+    cb(fallback)
   }
 }
 

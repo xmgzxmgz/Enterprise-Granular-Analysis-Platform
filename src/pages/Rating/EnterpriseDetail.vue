@@ -8,6 +8,8 @@
           :fetch-suggestions="suggestEnterprises"
           placeholder="输入企业名称进行搜索（支持模糊匹配与联想）"
           style="width: 520px"
+          trigger-on-focus
+          :debounce="100"
           @select="onSelectSuggestion"
           @keyup.enter="onSearch"
           clearable
@@ -64,13 +66,20 @@ const suggestEnterprises = async (
 ) => {
   try {
     const resp = await getEtpsData({ q, size: 10 })
-    const list: Row[] = resp?.rows || resp || []
-    cb(
-      list.map((r: any) => ({
-        value: String(r.etps_name || r.name || ''),
-        item: normalizeRow(r)
-      }))
-    )
+    let list: Row[] = resp?.rows || resp || []
+    if (!list.length) {
+      const all = await getEtpsData({ q: '', size: 50 })
+      const rows = all?.rows || all || []
+      const k = q.trim()
+      list = rows.filter((r: any) => {
+        const name = String(r.etps_name || r.name || '')
+        return k ? name.includes(k) : !!name
+      })
+    }
+    const uniq = Array.from(
+      new Map(list.map((r: any) => [String(r.etps_name || r.name || ''), r])).entries()
+    ).map(([n, r]) => ({ value: n, item: normalizeRow(r) }))
+    cb(uniq)
   } catch {
     cb([])
   }
@@ -106,7 +115,18 @@ const canonicalMap: Record<string, string> = {
   industryPhyName: 'industry_phy_name',
   industryCodeName: 'industry_code_name',
   areaId: 'area_id',
-  aeoRating: 'aeo_rating'
+  existStatus: 'exist_status',
+  commonBusi: 'common_busi',
+  importRatio: 'import_ratio',
+  mainCiqCodes: 'main_ciq_codes',
+  mainParentCiq: 'main_parent_ciq',
+  topTradeCountries: 'top_trade_countries',
+  transportMode: 'transport_mode',
+  totalDeclAmt: 'total_decl_amt',
+  totalEntryCnt: 'total_entry_cnt',
+  avgTicketVal: 'avg_ticket_val',
+  aeoRating: 'aeo_rating',
+  delayRate: 'delay_rate'
 }
 const normalizeRow = (row: Row) => {
   const out: Row = { ...row }
@@ -130,12 +150,18 @@ const fieldLabelMap: Record<string, string> = {
   industry_phy_name: '行业门类',
   industry_code_name: '行业细分',
   area_id: '区域代码',
+  exist_status: '存在状态',
   aeo_rating: 'AEO等级',
   total_decl_amt: '申报金额',
   total_entry_cnt: '申报票数',
   avg_ticket_val: '平均票值',
   delay_rate: '延误率',
-  common_busi: '业务概述'
+  common_busi: '业务概述',
+  import_ratio: '进口比率',
+  main_ciq_codes: '主要检验检疫代码',
+  main_parent_ciq: '主要上级检验检疫',
+  top_trade_countries: '主要贸易国家',
+  transport_mode: '运输方式'
 }
 const autoLabelCn = (key: string) => {
   const k = key.toLowerCase()
