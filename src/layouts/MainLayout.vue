@@ -36,5 +36,6 @@ const isMobile = computed(() => width.value < 920);
 .app-main {
   padding: 0;
   background: var(--main-bg);
+  min-height: calc(100vh - 96px);
 }
 </style>

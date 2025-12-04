@@ -4,7 +4,7 @@
       <el-menu
         :default-active="active"
         class="mini"
-        :unique-opened="true"
+        :unique-opened="false"
         :default-openeds="defaultOpeneds"
         @select="onSelect"
       >
@@ -175,7 +175,7 @@
         </el-sub-menu>
       </el-menu>
     </div>
-    <div class="right-content">
+    <div class="right-content" ref="rightContentRef">
       <div v-if="false" class="grid3">
         <div class="card">
           <div class="card-header">
@@ -246,7 +246,10 @@
             </el-table>
           </div>
         </div>
-        <div class="footer">
+        <div
+          class="footer footer-fixed"
+          :style="{ width: toolbarWidth + 'px' }"
+        >
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
@@ -274,63 +277,136 @@
         </div>
       </div>
 
-      <div v-else-if="active.endsWith('filter')" class="card">
+      <div
+        v-else-if="active.endsWith('filter')"
+        class="card filter-card"
+        :style="{ width: toolbarWidth + frameOffset + 'px' }"
+        ref="filterCardRef"
+      >
         <div class="title">数据筛选</div>
-        <div class="toolbar">
-          <el-steps
-            :active="stepIndex"
-            align-center
-            finish-status="success"
-            class="steps"
-          >
-            <el-step title="数据筛选" @click="goStep(0)" />
-            <el-step title="特征选择" @click="goStep(1)" />
-            <el-step title="分类值调整" @click="goStep(2)" />
-            <el-step title="可视化展示" @click="goStep(3)" />
-            <el-step title="标签配置" @click="goStep(4)" />
-          </el-steps>
-          <el-input
-            v-model="filterKeyword"
-            placeholder="搜索企业/字段"
-            style="max-width: 240px"
-          ></el-input>
+        <div class="toolbar toolbar-row">
+          <div class="steps-fixed">
+            <el-steps
+              :active="stepIndex"
+              align-center
+              finish-status="success"
+              class="steps"
+            >
+              <el-step title="数据筛选" @click="goStep(0)" />
+              <el-step title="特征选择" @click="goStep(1)" />
+              <el-step title="分类值调整" @click="goStep(2)" />
+              <el-step title="可视化展示" @click="goStep(3)" />
+              <el-step title="标签配置" @click="goStep(4)" />
+            </el-steps>
+          </div>
+          <div class="tools-fixed">
+            <el-input
+              v-model="filterKeyword"
+              placeholder="搜索企业/字段"
+              size="small"
+              clearable
+              style="width: 360px"
+            ></el-input>
+            <el-button size="small" type="primary" @click="openFieldFilter"
+              >字段筛选</el-button
+            >
+          </div>
         </div>
-        <el-table
-          :data="filteredRows"
-          height="420"
-          size="small"
-          style="width: 100%"
-          @row-click="toBasic"
-          @selection-change="onSelectionChange"
-        >
-          <el-table-column type="selection" width="48"></el-table-column>
-          <el-table-column
-            v-for="col in visibleColumns"
-            :key="col.key"
-            :prop="col.key"
-            :label="col.label"
-            :width="colWidth(col.key)"
-            :show-overflow-tooltip="true"
-            sortable
+        <div class="table-scroll" style="height: 100%">
+          <el-table
+            :data="tableRows"
+            height="100%"
+            size="small"
+            border
+            style="width: 100%"
+            @row-click="toBasic"
+            @selection-change="onSelectionChange"
           >
-            <template #default="scope">
-              <div class="cell-clamp">
-                {{
-                  Array.isArray(scope.row[col.key])
-                    ? scope.row[col.key].join(",")
-                    : String(scope.row[col.key] ?? "")
-                }}
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column fixed="right" width="160">
-            <template #header>
-              <el-button size="small" type="primary" @click="openFieldFilter"
-                >字段筛选</el-button
+            <el-table-column type="selection" width="48"></el-table-column>
+            <el-table-column
+              v-for="col in visibleColumns"
+              :key="col.key"
+              :prop="col.key"
+              :label="col.label"
+              :width="colWidth(col.key)"
+              :show-overflow-tooltip="true"
+              sortable
+            >
+              <template #header>
+                <div class="col-header">
+                  <span>{{ col.label }}</span>
+                  <el-icon
+                    class="filter-icon"
+                    @click.stop="openColFilter(col.key)"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M6 2h12v2c0 2.5-3 4.5-6 5.5C9 8.5 6 6.5 6 4V2zm0 20v-2c0-2.5 3-4.5 6-5.5 3 1 6 3 6 5.5v2H6zm6-9c-2.7-.9-5-2.4-6-4.4V9c0 2.2 2.6 3.9 6 4.9 3.4-1 6-2.7 6-4.9V8.6c-1 2-3.3 3.5-6 4.4z"
+                      />
+                    </svg>
+                  </el-icon>
+                </div>
+              </template>
+              <template #default="scope">
+                <div class="cell-clamp">
+                  {{
+                    Array.isArray(scope.row[col.key])
+                      ? scope.row[col.key].join(",")
+                      : String(scope.row[col.key] ?? "")
+                  }}
+                </div>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+        <el-dialog
+          v-model="columnFilterDialogVisible"
+          :title="colDialogTitle"
+          :width="colDialogWidth + 'px'"
+          align-center
+        >
+          <el-input
+            v-model="colDialogSearch"
+            placeholder="搜索元素"
+            size="small"
+            clearable
+            style="margin-bottom: 8px; width: 100%"
+          />
+          <div
+            class="field-grid col-grid"
+            :style="{
+              gridTemplateColumns: 'repeat(' + colDialogCols + ', 1fr)',
+              maxHeight: colDialogMaxHeight + 'px',
+            }"
+          >
+            <el-checkbox-group v-model="colCheckedValues[colDialogKey]">
+              <el-checkbox
+                v-for="opt in colDialogOptionsSorted"
+                :key="opt"
+                :label="opt"
+                >{{ opt }}</el-checkbox
               >
-            </template>
-          </el-table-column>
-        </el-table>
+            </el-checkbox-group>
+          </div>
+          <template #footer>
+            <div class="field-actions">
+              <el-button @click="resetColFilter(colDialogKey)">重置</el-button>
+              <el-button @click="selectAllColFilter(colDialogKey)"
+                >全选</el-button
+              >
+              <el-button @click="invertColFilter(colDialogKey)">反选</el-button>
+              <el-button type="primary" @click="confirmColFilter(colDialogKey)"
+                >确认</el-button
+              >
+            </div>
+          </template>
+        </el-dialog>
         <el-dialog
           v-model="fieldFilterVisible"
           title="字段筛选"
@@ -356,14 +432,20 @@
             </div>
           </template>
         </el-dialog>
-        <div class="footer">
+        <div
+          class="footer footer-fixed floating-footer"
+          :style="footerFixedStyle"
+        >
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
-
-      <div v-else-if="active.endsWith('feature')" class="card">
+      <div
+        v-else-if="active.endsWith('feature')"
+        class="card feature-card"
+        :style="{ width: toolbarWidth + frameOffset + 'px' }"
+      >
         <div class="title">特征选择</div>
         <div class="toolbar">
           <el-steps
@@ -386,13 +468,14 @@
           <div class="feature-list">
             <el-checkbox-group v-model="checkedFeatures">
               <div
-                v-for="f in features"
+                v-for="f in featuresSorted"
                 :key="f.name"
                 class="feature-item"
-                @click="openFeature(f)"
               >
-                <span class="fname">{{ f.name }}</span>
                 <el-checkbox :label="f.name" />
+                <span class="fname-btn" @click="openFeature(f)">{{
+                  f.name
+                }}</span>
               </div>
             </el-checkbox-group>
           </div>
@@ -420,14 +503,21 @@
             />
           </div>
         </div>
-        <div class="footer">
+        <div
+          class="footer footer-fixed floating-footer"
+          :style="footerFixedStyle"
+        >
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
-      <div v-else-if="active.endsWith('class')" class="card">
+      <div
+        v-else-if="active.endsWith('class')"
+        class="card class-card"
+        :style="{ width: toolbarWidth + frameOffset + 'px' }"
+      >
         <div class="title">分类值调整</div>
         <div class="toolbar">
           <el-steps
@@ -445,23 +535,25 @@
         </div>
         <div ref="classRef" class="chart" />
         <div class="k-select-row">
-          <div class="k-labels">
-            <span v-for="k in kOptions" :key="'lbl-' + k" class="k-num">{{
-              k
-            }}</span>
-          </div>
           <el-checkbox-group v-model="checkedK" class="k-checkboxes">
             <el-checkbox v-for="k in kOptions" :key="'chk-' + k" :label="k" />
           </el-checkbox-group>
         </div>
-        <div class="footer">
+        <div
+          class="footer footer-fixed floating-footer"
+          :style="footerFixedStyle"
+        >
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
-      <div v-else-if="active.endsWith('visual')" class="card">
+      <div
+        v-else-if="active.endsWith('visual')"
+        class="card visual-card"
+        :style="{ width: toolbarWidth + frameOffset + 'px' }"
+      >
         <div class="title">可视化展示</div>
         <div class="toolbar">
           <el-steps
@@ -478,25 +570,37 @@
           </el-steps>
         </div>
         <div class="visual-wrap">
-          <div ref="abcPieRef" class="chart" />
-          <div class="table-wrap">
-            <el-table :data="companyScores" height="360">
-              <el-table-column prop="category" label="类别" width="160" />
-              <el-table-column prop="class" label="分类" width="120" />
-              <el-table-column prop="rating" label="评级" width="120" />
-              <el-table-column prop="score" label="评分" width="120" />
-              <el-table-column label="操作" width="140">
-                <template #default="{ row }">
-                  <el-button size="small" @click="browseAll(row.category)"
-                    >全数据浏览</el-button
-                  >
-                </template>
-              </el-table-column>
-            </el-table>
+          <div class="chart-box">
+            <div ref="abcPieRef" class="chart" />
+          </div>
+          <div class="chart-box">
+            <div class="table-wrap">
+              <el-table
+                :data="companyScores"
+                class="company-table"
+                height="420"
+                border
+                stripe
+              >
+                <el-table-column prop="category" label="类别" width="160" />
+                <el-table-column prop="class" label="分类" width="120" />
+                <el-table-column prop="rating" label="评级" width="120" />
+                <el-table-column prop="score" label="评分" width="120" />
+                <el-table-column label="操作" width="140">
+                  <template #default="{ row }">
+                    <el-button size="small" @click="browseAll(row.category)"
+                      >全数据浏览</el-button
+                    >
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
           </div>
         </div>
         <div class="visual-bottom">
-          <div class="chart" ref="radarRef" />
+          <div class="chart-box">
+            <div class="chart" ref="radarRef" />
+          </div>
           <div class="chart-box">
             <div class="box-toolbar">
               <el-select
@@ -516,14 +620,21 @@
             <div ref="visualBoxRef" class="chart" />
           </div>
         </div>
-        <div class="footer">
+        <div
+          class="footer footer-fixed floating-footer"
+          :style="footerFixedStyle"
+        >
           <el-button @click="reset">重置</el-button>
           <el-button @click="prevStep">上一步</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </div>
 
-      <div v-else class="card">
+      <div
+        v-else
+        class="card tag-card"
+        :style="{ width: toolbarWidth + frameOffset + 'px' }"
+      >
         <div class="title">标签配置</div>
         <div class="toolbar">
           <el-steps
@@ -568,7 +679,10 @@
             </template>
           </el-table-column>
         </el-table>
-        <div class="footer">
+        <div
+          class="footer footer-fixed floating-footer"
+          :style="footerFixedStyle"
+        >
           <el-button @click="reset">重置</el-button>
           <el-button type="success" @click="finish">完成</el-button>
         </div>
@@ -579,7 +693,10 @@
             <el-table-column prop="ratingDetail" label="专家评级详细" />
             <el-table-column prop="score" label="评分" width="120" />
           </el-table>
-          <div class="footer">
+          <div
+            class="footer footer-fixed floating-footer"
+            :style="footerFixedStyle"
+          >
             <el-button>取消</el-button>
             <el-button type="primary">详细结果浏览</el-button>
           </div>
@@ -598,7 +715,7 @@ import { ElMessage } from "element-plus";
 
 const router = useRouter();
 const active = ref("topic");
-const defaultOpeneds = ref(["params"]);
+const defaultOpeneds = ref(["params", "v1", "v2", "v3", "v4", "v5"]);
 const onSelect = (key: string) => (active.value = key);
 const steps = ref<string[]>([]);
 const stepIndex = ref(0);
@@ -675,6 +792,26 @@ const disableRef = ref<HTMLDivElement | null>(null);
 const deleteRef = ref<HTMLDivElement | null>(null);
 const topicPieRef = ref<HTMLDivElement | null>(null);
 const topicTrendRef = ref<HTMLDivElement | null>(null);
+
+const rightContentRef = ref<HTMLDivElement | null>(null);
+const toolbarWidth = ref<number>(0);
+const updateToolbarWidth = () => {
+  const w = rightContentRef.value?.clientWidth ?? 0;
+  toolbarWidth.value = w > 0 ? w : 0;
+};
+const frameOffset = ref<number>(-12);
+const filterCardRef = ref<HTMLDivElement | null>(null);
+const footerFixedStyle = ref<Record<string, string>>({});
+const updateFloatingFooter = () => {
+  const rect = filterCardRef.value?.getBoundingClientRect();
+  const left =
+    rect?.left ?? rightContentRef.value?.getBoundingClientRect()?.left ?? 0;
+  const width = toolbarWidth.value + frameOffset.value;
+  footerFixedStyle.value = {
+    left: `${Math.max(0, Math.round(left))}px`,
+    width: `${Math.max(0, Math.round(width))}px`,
+  };
+};
 
 const distChartType = ref<"bar" | "line">("bar");
 
@@ -796,6 +933,90 @@ const renderBox = () => {
 const filterKeyword = ref("");
 const rows = reactive<Record<string, any>[]>([]);
 const filteredRows = ref(rows);
+const columnFilterVisible = reactive<Record<string, boolean>>({});
+const colCheckedValues = reactive<Record<string, string[]>>({});
+const colFilterOptions = reactive<Record<string, string[]>>({});
+const columnFilterDialogVisible = ref(false);
+const colDialogKey = ref<string>("");
+const colDialogTitle = computed(() => {
+  const key = colDialogKey.value;
+  const label = allColumns.value.find((c) => c.key === key)?.label || key;
+  return `字段筛选 - ${label}`;
+});
+const colDialogSearch = ref("");
+const colDialogOptionsSorted = computed(() => {
+  const key = colDialogKey.value;
+  const opts = colFilterOptions[key] || [];
+  const q = colDialogSearch.value.trim().toLowerCase();
+  const filtered = q
+    ? opts.filter((o) => String(o).toLowerCase().includes(q))
+    : opts;
+  return [...filtered].sort(
+    (a, b) =>
+      String(a).length - String(b).length || String(a).localeCompare(String(b))
+  );
+});
+const colDialogCols = computed(() => {
+  const n = colDialogOptionsSorted.value.length;
+  return n > 160 ? 6 : n > 100 ? 5 : n > 60 ? 4 : n > 36 ? 3 : n > 18 ? 2 : 1;
+});
+const colDialogWidth = computed(() => {
+  const maxW = Math.max(320, toolbarWidth.value + frameOffset.value - 24);
+  const base = 560;
+  const perCol = 220;
+  const w = base + perCol * (colDialogCols.value - 1);
+  return Math.min(Math.max(base, w), maxW);
+});
+const colDialogMaxHeight = computed(() => {
+  const vh = window.innerHeight || 800;
+  return Math.max(360, Math.floor(vh - 220));
+});
+const tableRows = computed(() => {
+  const base = filteredRows.value as any[];
+  const keys = Object.keys(colCheckedValues).filter(
+    (k) => (colCheckedValues[k] || []).length
+  );
+  if (!keys.length) return base;
+  return base.filter((r) => {
+    for (const k of keys) {
+      const sel = colCheckedValues[k];
+      const val = Array.isArray((r as any)[k])
+        ? (r as any)[k].map((x: any) => String(x ?? ""))
+        : [String((r as any)[k] ?? "")];
+      if (!val.some((v: string) => sel.includes(v))) return false;
+    }
+    return true;
+  });
+});
+const openColFilter = (key: string) => {
+  const set = new Set<string>();
+  for (const r of filteredRows.value) {
+    const v = (r as any)[key];
+    if (Array.isArray(v)) v.forEach((x) => set.add(String(x ?? "")));
+    else set.add(String(v ?? ""));
+  }
+  colFilterOptions[key] = Array.from(set)
+    .filter((s) => s !== "")
+    .sort();
+  colDialogKey.value = key;
+  columnFilterDialogVisible.value = true;
+  if (!colCheckedValues[key]) colCheckedValues[key] = [];
+};
+const resetColFilter = (key: string) => {
+  colCheckedValues[key] = [];
+  columnFilterDialogVisible.value = false;
+};
+const confirmColFilter = (key: string) => {
+  columnFilterDialogVisible.value = false;
+};
+const selectAllColFilter = (key: string) => {
+  colCheckedValues[key] = [...(colFilterOptions[key] || [])];
+};
+const invertColFilter = (key: string) => {
+  const opts = new Set(colFilterOptions[key] || []);
+  const sel = new Set(colCheckedValues[key] || []);
+  colCheckedValues[key] = Array.from(opts).filter((o) => !sel.has(o));
+};
 const selectedEnterprises = ref<string[]>([]);
 const onSelectionChange = (sel: any[]) => {
   selectedEnterprises.value = Array.from(new Set(sel.map((r) => r.etps_name)));
@@ -818,7 +1039,9 @@ const loadEtps = async () => {
     rows.splice(0, rows.length, ...list);
     filteredRows.value = rows;
     total.value = Number(resp?.total || list.length || 0);
-    checkedColumns.value = allColumns.value.map((c: ColumnDef) => c.key);
+    checkedColumns.value = orderKeys(
+      allColumns.value.map((c: ColumnDef) => c.key)
+    );
     ElMessage.success("获取企业信息成功");
   } catch (e) {
     filteredRows.value = [] as any;
@@ -843,6 +1066,25 @@ const baseColumns: ColumnDef[] = [
   { key: "delay_rate", label: "延误率" },
   { key: "common_busi", label: "业务概述" },
 ];
+const preferredOrder = [
+  "id",
+  "etps_name",
+  "industry_phy_name",
+  "industry_code_name",
+  "area_id",
+  "exist_status",
+  "common_busi",
+  "import_ratio",
+  "main_ciq_codes",
+  "main_parent_ciq",
+  "top_trade_countries",
+  "transport_mode",
+  "total_decl_amt",
+  "total_entry_cnt",
+  "avg_ticket_val",
+  "aeo_rating",
+  "delay_rate",
+];
 const allColumns = computed<ColumnDef[]>(() => {
   const keys = new Set(baseColumns.map((c) => c.key));
   for (const r of filteredRows.value) {
@@ -866,11 +1108,21 @@ const allColumns = computed<ColumnDef[]>(() => {
   }));
 });
 const checkedColumns = ref<string[]>([]);
-const visibleColumns = computed(() =>
-  allColumns.value.filter((c: ColumnDef) =>
+const orderKeys = (keys: string[]) => {
+  const set = new Set(keys);
+  const head = preferredOrder.filter((k) => set.has(k));
+  const tail = keys.filter((k) => !head.includes(k)).sort();
+  return [...head, ...tail];
+};
+const visibleColumns = computed(() => {
+  const pool = allColumns.value.filter((c) =>
     checkedColumns.value.includes(c.key)
-  )
-);
+  );
+  const order = new Map(
+    orderKeys(pool.map((c) => c.key)).map((k, i) => [k, i])
+  );
+  return [...pool].sort((a, b) => order.get(a.key)! - order.get(b.key)!);
+});
 const colWidth = (key: string) => {
   const getLen = (v: any) => {
     if (v === null || v === undefined) return 0;
@@ -881,16 +1133,18 @@ const colWidth = (key: string) => {
   for (const r of filteredRows.value) {
     maxLen = Math.max(maxLen, getLen((r as any)[key]));
   }
-  const charW = 12;
+  const charW = 10;
   const units = Math.max(5, Math.min(Math.ceil(maxLen) + 2, 26));
   return units * charW;
 };
 const fieldFilterVisible = ref(false);
 const openFieldFilter = () => (fieldFilterVisible.value = true);
 const resetColumns = () =>
-  (checkedColumns.value = baseColumns.map((c) => c.key));
+  (checkedColumns.value = orderKeys(baseColumns.map((c) => c.key)));
 const selectAllColumns = () =>
-  (checkedColumns.value = allColumns.value.map((c: ColumnDef) => c.key));
+  (checkedColumns.value = orderKeys(
+    allColumns.value.map((c: ColumnDef) => c.key)
+  ));
 const invertColumns = () => {
   const all = new Set<string>(allColumns.value.map((c: ColumnDef) => c.key));
   const cur = new Set<string>(checkedColumns.value);
@@ -944,6 +1198,13 @@ const curRange = ref<[number, number]>([
   curStats.value.min,
   curStats.value.max,
 ]);
+const featuresSorted = computed(() => {
+  return [...features].sort(
+    (a, b) =>
+      String(b.name).length - String(a.name).length ||
+      String(a.name).localeCompare(String(b.name))
+  );
+});
 const featureAggStats = ref<
   Record<
     string,
@@ -1135,9 +1396,14 @@ const renderRadar = () => {
       Math.max(30, Math.min(95, Math.round(60 + 15 * Math.sin(seed + i))))
     );
   const option = {
-    title: { text: "ABC类企业指标雷达图", left: "center" },
-    legend: { data: ["A类", "B类", "C类"], top: 28 },
-    radar: { indicator: indicators },
+    title: { text: "ABC类企业指标雷达图", left: "center", top: 8 },
+    legend: { data: ["A类", "B类", "C类"], top: 40 },
+    radar: {
+      indicator: indicators,
+      top: 80,
+      center: ["50%", "55%"],
+      radius: "70%",
+    },
     series: [
       {
         type: "radar",
@@ -1163,16 +1429,30 @@ const boxMetric = ref<string>("");
 const renderVisualBox = () => {
   if (!visualBoxRef.value) return;
   const chart = echarts.init(visualBoxRef.value);
+  const metric = boxMetric.value || "指标";
+  const seed = Array.from(metric).reduce((s, ch) => s + ch.charCodeAt(0), 0);
+  const mk = (base: number) => {
+    const r = (seed % 11) - 5; // -5..5
+    const arr = [
+      base - 15 + r,
+      base - 5 + r,
+      base + r,
+      base + 10 + r,
+      base + 20 + r,
+    ];
+    return [Math.max(0, arr[0]), Math.max(0, arr[1]), arr[2], arr[3], arr[4]];
+  };
   const option = {
-    title: { text: `箱线图：${boxMetric.value || "指标"}`, left: "center" },
+    title: { text: `箱线图：${metric}`, left: "center", top: 8 },
     tooltip: { trigger: "item" },
-    legend: { data: ["A类", "B类", "C类"] },
+    legend: { data: ["A类", "B类", "C类"], top: 40 },
+    grid: { top: 72, left: 40, right: 20, bottom: 40 },
     xAxis: { type: "category", data: ["A类", "B类", "C类"] },
     yAxis: { type: "value" },
     series: [
-      { name: "A类", type: "boxplot", data: [[20, 35, 50, 65, 80]] },
-      { name: "B类", type: "boxplot", data: [[25, 40, 55, 70, 85]] },
-      { name: "C类", type: "boxplot", data: [[30, 45, 60, 75, 90]] },
+      { name: "A类", type: "boxplot", data: [mk(50)] },
+      { name: "B类", type: "boxplot", data: [mk(60)] },
+      { name: "C类", type: "boxplot", data: [mk(70)] },
     ],
   };
   chart.setOption(option);
@@ -1187,14 +1467,8 @@ const renderVisualBox = () => {
 const renderABCPie = () => {
   if (!abcPieRef.value) return;
   const chart = echarts.init(abcPieRef.value);
-  const dist = { A: 0, B: 0, C: 0 } as Record<string, number>;
-  for (const r of filteredRows.value) {
-    const v = String(r.aeo_rating || "").toUpperCase();
-    if (v === "A") dist.A++;
-    else if (v === "B") dist.B++;
-    else if (v === "C") dist.C++;
-  }
-  const total = Math.max(1, dist.A + dist.B + dist.C);
+  const dist = { A: 40, B: 35, C: 25 } as Record<string, number>;
+  const total = dist.A + dist.B + dist.C;
   const data = [
     { name: "A类", value: dist.A },
     { name: "B类", value: dist.B },
@@ -1430,6 +1704,17 @@ onMounted(async () => {
   await loadEtps();
   boxMetric.value = features[0]?.name || "";
   mountCharts();
+  updateToolbarWidth();
+  updateFloatingFooter();
+  const onResize = () => {
+    updateToolbarWidth();
+    updateFloatingFooter();
+  };
+  const onScroll = () => updateFloatingFooter();
+  window.addEventListener("resize", onResize);
+  window.addEventListener("scroll", onScroll, { passive: true });
+  (window as any)._tuningResize = onResize;
+  (window as any)._tuningScroll = onScroll;
 });
 watch(active, () => {
   if (active.value.includes("-")) {
@@ -1449,8 +1734,17 @@ watch(checkedK, () => {
 watch(distChartType, () => {
   if (active.value === "dualuse") setTimeout(mountCharts, 0);
 });
+watch(boxMetric, () => {
+  if (active.value.endsWith("visual") || active.value === "topic") {
+    setTimeout(mountCharts, 0);
+  }
+});
 onUnmounted(() => {
   disposers.forEach((d) => d());
+  const r = (window as any)._tuningResize;
+  const s = (window as any)._tuningScroll;
+  if (r) window.removeEventListener("resize", r);
+  if (s) window.removeEventListener("scroll", s as any);
 });
 </script>
 
@@ -1503,6 +1797,14 @@ onUnmounted(() => {
 .right-content {
   flex: 1;
   padding: 12px;
+  min-height: calc(100vh - 96px);
+  max-width: 100%;
+  overflow-x: hidden;
+}
+.filter-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  min-height: calc(100vh - 96px - 24px);
 }
 .grid3 {
   display: grid;
@@ -1514,6 +1816,7 @@ onUnmounted(() => {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 12px;
+  box-sizing: border-box;
 }
 .title {
   font-weight: 600;
@@ -1523,10 +1826,10 @@ onUnmounted(() => {
   height: 320px;
 }
 .visual-bottom .chart {
-  height: 280px;
+  height: 420px;
 }
 .visual-wrap .chart {
-  height: 320px;
+  height: 360px;
 }
 .btns {
   display: flex;
@@ -1536,11 +1839,44 @@ onUnmounted(() => {
 .toolbar {
   margin-bottom: 8px;
 }
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--main-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.steps {
+  width: 720px;
+  max-width: 100%;
+}
+.steps-fixed {
+  flex: 0 0 auto;
+}
+.tools-fixed {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
+}
+.footer-fixed {
+  background: var(--main-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.floating-footer {
+  position: fixed;
+  bottom: 12px;
+  z-index: 1000;
 }
 .feature-wrap {
   display: grid;
@@ -1564,7 +1900,8 @@ onUnmounted(() => {
 .feature-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   padding: 6px 8px;
 }
 .feature-item:hover {
@@ -1572,14 +1909,23 @@ onUnmounted(() => {
   border-radius: 6px;
   cursor: pointer;
 }
-.fname {
+.fname-btn {
+  display: inline-block;
   color: var(--text-primary);
+  border: 1px solid #93c5fd;
+  border-radius: 6px;
+  padding: 4px 12px;
+  background: #e5f0ff;
+  text-align: center;
+  min-width: 120px;
 }
 .feature-detail {
   display: grid;
-  grid-template-rows: 260px auto;
+  grid-template-rows: 1fr auto;
   gap: 8px;
   margin-top: 12px;
+  min-height: 360px;
+  overflow: auto;
 }
 .detail-values {
   display: flex;
@@ -1604,6 +1950,9 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 12px;
 }
+.chart-box .chart {
+  margin-top: 8px;
+}
 .box-toolbar {
   display: flex;
   justify-content: flex-end;
@@ -1612,9 +1961,59 @@ onUnmounted(() => {
 .table-wrap {
   flex: 1;
 }
+.table-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+.table-scroll :deep(.el-table) {
+  min-width: 1200px;
+}
 .table-wrap :deep(.el-table .cell) {
-  padding: 4px 6px;
-  line-height: 1.3;
+  padding: 3px 6px;
+  line-height: 1.25;
+}
+.company-table :deep(.el-table__header th) {
+  background: var(--main-bg);
+  font-weight: 600;
+}
+.company-table :deep(.el-table .cell) {
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.company-table :deep(.el-table__body tr:hover > td) {
+  background: rgba(59, 130, 246, 0.06);
+}
+.table-wrap :deep(.el-table th .cell) {
+  padding: 3px 6px;
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+.col-grid {
+  align-items: start;
+}
+.col-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.filter-icon {
+  cursor: pointer;
+}
+.table-wrap :deep(.el-table) {
+  font-size: 13px;
+}
+.table-wrap :deep(.el-table__header th),
+.table-wrap :deep(.el-table__body td) {
+  border-right: 1px solid var(--border-color);
+}
+.table-wrap :deep(.el-table__header th:last-child),
+.table-wrap :deep(.el-table__body td:last-child) {
+  border-right: none;
 }
 .cell-clamp {
   display: -webkit-box;
@@ -1628,24 +2027,15 @@ onUnmounted(() => {
 }
 .k-select-row {
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   gap: 6px;
-  justify-items: center;
+  justify-items: stretch;
   margin-top: 8px;
-}
-.k-labels {
-  display: flex;
-  gap: 16px;
-}
-.k-num {
-  display: inline-block;
-  width: 24px;
-  text-align: center;
-  color: var(--text-secondary);
 }
 .k-checkboxes {
   display: flex;
-  gap: 16px;
+  justify-content: space-between;
+  width: 100%;
 }
 .after {
   margin-top: 12px;
