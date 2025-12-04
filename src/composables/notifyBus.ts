@@ -13,6 +13,13 @@ export type NoticeItem = {
 
 export const notifications = ref<NoticeItem[]>([]);
 
+/**
+ * Dispatch a notification to UI and global store.
+ * @param type Notification type
+ * @param title Title
+ * @param message Optional message
+ * @param context Optional context data
+ */
 export function notify(
   type: NoticeType,
   title: string,
@@ -38,27 +45,45 @@ export function notify(
   });
 }
 
+/**
+ * Show success notification.
+ */
 export const notifySuccess = (
   title: string,
   message?: string,
   context?: Record<string, any>
 ) => notify("success", title, message, context);
+
+/**
+ * Show error notification.
+ */
 export const notifyError = (
   title: string,
   message?: string,
   context?: Record<string, any>
 ) => notify("error", title, message, context);
+
+/**
+ * Show info notification.
+ */
 export const notifyInfo = (
   title: string,
   message?: string,
   context?: Record<string, any>
 ) => notify("info", title, message, context);
+
+/**
+ * Show warning notification.
+ */
 export const notifyWarn = (
   title: string,
   message?: string,
   context?: Record<string, any>
 ) => notify("warning", title, message, context);
 
+/**
+ * Clear all notifications from store.
+ */
 export function clearNotifications() {
   notifications.value = [];
 }

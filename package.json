@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:node": "node-dev server.js",
+    "dev:node": "node-dev mock_server/server.js",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/"
   },
   "dependencies": {
     "@vue-flow/core": "^1.38.1",
@@ -19,11 +21,21 @@
   },
   "devDependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@rushstack/eslint-patch": "^1.15.0",
+    "@types/node": "^24.10.1",
     "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.6.0",
+    "@vue/test-utils": "^2.4.6",
+    "eslint": "^9.39.1",
+    "eslint-plugin-vue": "^10.6.2",
+    "jsdom": "^27.0.1",
     "node-dev": "^8.0.0",
+    "prettier": "^3.7.4",
     "typescript": "^5.6.2",
     "vite": "^5.4.0",
     "vite-plugin-vue-inspector": "^5.3.2",
+    "vitest": "^3.2.4",
     "vue-tsc": "^2.2.12"
   }
 }

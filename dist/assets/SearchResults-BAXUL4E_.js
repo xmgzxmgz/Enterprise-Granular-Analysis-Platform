@@ -1,1 +1,0 @@
-import{d as r,p as u,X as o,x as a,u as c}from"./index-BT2JZAz1.js";const f=r({__name:"SearchResults",setup(m){const t=o(),n=u(String(t.query.q||"").trim()),s=c();return a(async()=>{const e=n.value;e?s.push({name:"企业详情",query:{name:e}}):s.push({name:"企业基本信息"})}),(e,p)=>null}});export{f as default};

@@ -12,15 +12,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref } from "vue";
 import AppHeader from "@/components/AppHeader.vue";
 
 const width = ref(window.innerWidth);
 const onResize = () => (width.value = window.innerWidth);
 onMounted(() => window.addEventListener("resize", onResize));
 onUnmounted(() => window.removeEventListener("resize", onResize));
-
-const isMobile = computed(() => width.value < 920);
 </script>
 
 <style scoped>
