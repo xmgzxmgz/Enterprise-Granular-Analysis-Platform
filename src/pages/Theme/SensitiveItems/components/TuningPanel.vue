@@ -19,72 +19,34 @@
             </div>
           </template>
           <el-sub-menu index="v1" v-if="versions.v1.exists">
-            <template #title><span class="v-title" @click="enableVersion('v1')">V1</span></template>
+            <template #title>
+              <span class="v-title" @click="enableVersion('v1')">{{ versionLabel('v1') }}</span>
+            </template>
             <div class="version-actions">
               <el-button type="primary" plain size="small" @click="enableVersion('v1')"
-                >启用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="disableVersion('v1')"
-                >禁用</el-button
+                >查看</el-button
               >
               <el-button type="primary" plain size="small" @click="deleteVersion('v1')"
                 >删除</el-button
               >
-            </div>
-          </el-sub-menu>
-          <el-sub-menu index="v5" v-if="versions.v5.exists">
-            <template #title><span class="v-title" @click="enableVersion('v5')">V5</span></template>
-            <div class="version-actions">
-              <el-button type="primary" plain size="small" @click="enableVersion('v5')"
-                >启用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="disableVersion('v5')"
-                >禁用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="deleteVersion('v5')"
-                >删除</el-button
+              <el-button type="primary" plain size="small" @click="renameVersion('v1')"
+                >重命名</el-button
               >
             </div>
           </el-sub-menu>
-          <el-sub-menu index="v2" v-if="versions.v2.exists">
-            <template #title><span class="v-title" @click="enableVersion('v2')">V2</span></template>
+          <el-sub-menu v-for="ver in renderVersionKeys" :key="ver" :index="ver">
+            <template #title>
+              <span class="v-title" @click="enableVersion(ver)">{{ versionLabel(ver) }}</span>
+            </template>
             <div class="version-actions">
-              <el-button type="primary" plain size="small" @click="enableVersion('v2')"
-                >启用</el-button
+              <el-button type="primary" plain size="small" @click="enableVersion(ver)"
+                >查看</el-button
               >
-              <el-button type="primary" plain size="small" @click="disableVersion('v2')"
-                >禁用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="deleteVersion('v2')"
+              <el-button type="primary" plain size="small" @click="deleteVersion(ver)"
                 >删除</el-button
               >
-            </div>
-          </el-sub-menu>
-          <el-sub-menu index="v3" v-if="versions.v3.exists">
-            <template #title><span class="v-title" @click="enableVersion('v3')">V3</span></template>
-            <div class="version-actions">
-              <el-button type="primary" plain size="small" @click="enableVersion('v3')"
-                >启用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="disableVersion('v3')"
-                >禁用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="deleteVersion('v3')"
-                >删除</el-button
-              >
-            </div>
-          </el-sub-menu>
-          <el-sub-menu index="v4" v-if="versions.v4.exists">
-            <template #title><span class="v-title" @click="enableVersion('v4')">V4</span></template>
-            <div class="version-actions">
-              <el-button type="primary" plain size="small" @click="enableVersion('v4')"
-                >启用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="disableVersion('v4')"
-                >禁用</el-button
-              >
-              <el-button type="primary" plain size="small" @click="deleteVersion('v4')"
-                >删除</el-button
+              <el-button type="primary" plain size="small" @click="renameVersion(ver)"
+                >重命名</el-button
               >
             </div>
           </el-sub-menu>
@@ -149,22 +111,9 @@
             <div ref="visualBoxRef" class="chart" />
           </div>
           <div class="table-wrap">
-            <el-table :data="companyScores" height="300">
+            <el-table :data="companyScoresView" height="300">
               <el-table-column prop="category" label="类别" width="160" />
               <el-table-column prop="class" label="分类" width="120" />
-              <el-table-column prop="rating" label="评级" width="220">
-                <template #default="scope">
-                  <el-space wrap>
-                    <el-tag
-                      v-for="t in tagAssignments[scope.row.category] || []"
-                      :key="t"
-                      type="info"
-                      size="small"
-                      >{{ t }}</el-tag
-                    >
-                  </el-space>
-                </template>
-              </el-table-column>
               <el-table-column prop="score" label="评分" width="120" />
             </el-table>
           </div>
@@ -252,20 +201,25 @@
             >
               <template #header>
                 <div class="col-header">
-                  <span>{{ col.label }}</span>
-                  <el-icon class="filter-icon" @click.stop="openColFilter(col.key)">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      aria-hidden="true"
+                  <div class="col-top">{{ col.label }}</div>
+                  <div class="col-actions">
+                    <button
+                      class="col-btn"
+                      :class="sortBtnClass(col.key)"
+                      title="排序"
+                      @click.stop="toggleSort(col.key)"
                     >
-                      <path
-                        d="M6 2h12v2c0 2.5-3 4.5-6 5.5C9 8.5 6 6.5 6 4V2zm0 20v-2c0-2.5 3-4.5 6-5.5 3 1 6 3 6 5.5v2H6zm6-9c-2.7-.9-5-2.4-6-4.4V9c0 2.2 2.6 3.9 6 4.9 3.4-1 6-2.7 6-4.9V8.6c-1 2-3.3 3.5-6 4.4z"
-                      />
-                    </svg>
-                  </el-icon>
+                      排
+                    </button>
+                    <button
+                      class="col-btn"
+                      :class="filterBtnClass(col.key)"
+                      title="筛选"
+                      @click.stop="openColFilter(col.key)"
+                    >
+                      筛
+                    </button>
+                  </div>
                 </div>
               </template>
               <template #default="scope">
@@ -327,6 +281,55 @@
             </div>
           </template>
         </el-dialog>
+        <el-dialog v-model="createDialogVisible" title="新建项目" width="520px" align-center>
+          <el-form label-width="100px">
+            <el-form-item label="版本名字">
+              <el-input v-model="createForm.name" placeholder="请输入版本名字" />
+            </el-form-item>
+            <el-form-item label="创建人">
+              <el-input v-model="createForm.creator" placeholder="请输入创建人" />
+            </el-form-item>
+            <el-form-item label="创建时间">
+              <el-date-picker
+                v-model="createForm.createdAt"
+                type="datetime"
+                placeholder="选择创建时间"
+              />
+            </el-form-item>
+          </el-form>
+          <template #footer>
+            <div class="field-actions">
+              <el-button @click="createDialogVisible = false">取消</el-button>
+              <el-button type="primary" @click="confirmCreateVersion">确认</el-button>
+            </div>
+          </template>
+        </el-dialog>
+        <el-dialog v-model="renameDialogVisible" title="重命名版本" width="420px" align-center>
+          <el-input v-model="renameName" placeholder="请输入新名称" />
+          <template #footer>
+            <div class="field-actions">
+              <el-button @click="renameDialogVisible = false">取消</el-button>
+              <el-button type="primary" @click="confirmRenameVersion">确认</el-button>
+            </div>
+          </template>
+        </el-dialog>
+        <el-dialog
+          v-model="deleteDialogVisible"
+          :title="deleteStep === 1 ? '删除确认(1/2)' : '删除确认(2/2)'"
+          width="420px"
+          align-center
+        >
+          <div>即将删除版本：{{ versionLabel(deleteTarget) }}</div>
+          <div style="margin-top: 8px">请等待 {{ deleteCountdown }} 秒后再确认</div>
+          <template #footer>
+            <div class="field-actions">
+              <el-button @click="deleteDialogVisible = false">取消</el-button>
+              <el-button :disabled="deleteCountdown > 0" type="danger" @click="confirmDeleteStep"
+                >确认</el-button
+              >
+            </div>
+          </template>
+        </el-dialog>
         <el-dialog v-model="fieldFilterVisible" title="字段筛选" width="560px" align-center>
           <div class="field-grid">
             <el-checkbox-group v-model="checkedColumns">
@@ -367,7 +370,7 @@
         </div>
         <div class="feature-wrap">
           <div class="importance-chart">
-            <iframe src="/SHAP_Feature_Importance_Top_20.html" class="chart" />
+            <iframe :src="featureImportanceUrl" class="chart" />
           </div>
           <div class="feature-list">
             <el-checkbox-group v-model="checkedFeatures">
@@ -417,7 +420,7 @@
             <el-step title="可视化展示" @click="goStep(4)" />
           </el-steps>
         </div>
-        <div ref="classRef" class="chart" />
+        <iframe :src="modelComparisonUrl" class="chart" />
         <div class="k-select-row">
           <el-radio-group v-model="checkedKSingle" class="k-checkboxes">
             <el-radio v-for="k in kOptions" :key="'rad-' + k" :label="k" />
@@ -451,23 +454,35 @@
           </div>
           <div class="chart-box">
             <div class="table-wrap">
-              <el-table :data="companyScores" class="company-table" height="420" border stripe>
+              <el-table :data="companyScoresView" class="company-table" height="420" border stripe>
                 <el-table-column prop="category" label="类别" width="160" />
                 <el-table-column prop="class" label="分类" width="120" />
-                <el-table-column prop="rating" label="评级" width="120" />
                 <el-table-column prop="score" label="评分" width="120" />
                 <el-table-column label="操作" width="140">
                   <template #default="{ row }">
-                    <el-button size="small" @click="browseAll(row.category)">全数据浏览</el-button>
+                    <el-button size="small" @click="openCategory(row.category)"
+                      >全数据浏览</el-button
+                    >
                   </template>
                 </el-table-column>
               </el-table>
             </div>
           </div>
         </div>
+        <div v-if="categoryView" class="category-view">
+          <div class="cat-toolbar">
+            <el-button size="small" @click="backCategory">返回</el-button>
+            <span class="cat-tip">当前分类：{{ selectedCategory }}</span>
+          </div>
+          <el-table :data="categoryRows" height="420" border stripe>
+            <el-table-column :prop="'Consignee Enterprise'" label="收货企业" min-width="240" />
+            <el-table-column :prop="'Registration Location'" label="注册所在地" min-width="160" />
+            <el-table-column :prop="'Industry Category'" label="行业类别" min-width="160" />
+          </el-table>
+        </div>
         <div class="visual-bottom">
           <div class="chart-box">
-            <div class="chart" ref="radarRef" />
+            <iframe :src="riskDistributionUrl" class="chart" />
           </div>
           <div class="chart-box">
             <div class="box-toolbar">
@@ -503,15 +518,15 @@
         </div>
         <div class="tag-layout">
           <div class="shap-compare">
-            <div class="shap-placeholder">预留：SHAP 对比图（上）</div>
-            <div class="shap-placeholder">预留：SHAP 对比图（下）</div>
+            <iframe :src="shapCluster0Url" class="chart" />
+            <iframe :src="shapCluster1Url" class="chart" />
           </div>
           <div class="tag-assign">
             <div class="title">企业标签打标</div>
-            <el-table :data="companyScores" height="420">
+            <el-table :data="companyScoresView" height="420">
               <el-table-column prop="category" label="类别" width="120" />
               <el-table-column prop="class" label="分类" width="120" />
-              <el-table-column prop="rating" label="评级" width="120" />
+
               <el-table-column prop="score" label="评分" width="100" />
               <el-table-column label="标签">
                 <template #default="scope">
@@ -556,12 +571,38 @@
 import { onMounted, onUnmounted, reactive, ref, watch, computed } from 'vue'
 import * as echarts from 'echarts'
 import { useRouter } from 'vue-router'
-import { getTagDistribution, getEtpsData } from '@/services/api'
+import {
+  getTagDistribution,
+  getDualUseItems,
+  createTuningModel,
+  renameTuningModel,
+  deleteTuningModel
+} from '@/services/api'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const featureImportanceUrl = new URL(
+  '../../../../results_output/visualizations/feature_importance.html',
+  import.meta.url
+).href
+const modelComparisonUrl = new URL(
+  '../../../../results_output/visualizations/model_comparison.html',
+  import.meta.url
+).href
+const riskDistributionUrl = new URL(
+  '../../../../results_output/visualizations/risk_distribution.html',
+  import.meta.url
+).href
+const shapCluster0Url = new URL(
+  '../../../../results_output/visualizations/shap_cluster_0_importance.html',
+  import.meta.url
+).href
+const shapCluster1Url = new URL(
+  '../../../../results_output/visualizations/shap_cluster_1_importance.html',
+  import.meta.url
+).href
 const active = ref('topic')
-const defaultOpeneds = ref(['params', 'v1', 'v2', 'v3', 'v4', 'v5'])
+const defaultOpeneds = ref(['params', 'v1'])
 const onSelect = (key: string) => (active.value = key)
 const steps = ref<string[]>([])
 const stepIndex = ref(0)
@@ -606,16 +647,34 @@ const nextStep = () => {
 const prevStep = () => {
   if (stepIndex.value > 0) goStep(stepIndex.value - 1)
 }
-const browseAll = (category: string) => {
-  router.push({ name: '企业基本信息', query: { category } })
+const categoryView = ref(false)
+const selectedCategory = ref('')
+const openCategory = (category: string) => {
+  selectedCategory.value = category
+  categoryView.value = true
 }
-const versions = reactive<Record<string, { exists: boolean; enabled: boolean }>>({
-  v1: { exists: true, enabled: false },
-  v2: { exists: true, enabled: false },
-  v3: { exists: true, enabled: false },
-  v4: { exists: true, enabled: false },
-  v5: { exists: true, enabled: false }
+const backCategory = () => {
+  categoryView.value = false
+}
+const versions = reactive<
+  Record<
+    string,
+    {
+      exists: boolean
+      enabled: boolean
+      name?: string
+      creator?: string
+      createdAt?: number
+      id?: string
+    }
+  >
+>({
+  v1: { exists: true, enabled: false, name: 'V1' }
 })
+const versionLabel = (v: string) => versions[v]?.name || v.toUpperCase()
+const versionKeys = computed(() => Object.keys(versions))
+const otherVersionKeys = computed(() => versionKeys.value.filter((k) => k !== 'v1'))
+const renderVersionKeys = computed(() => otherVersionKeys.value.filter((k) => versions[k].exists))
 const enableVersion = (v: string) => {
   Object.keys(versions).forEach((k) => (versions[k].enabled = k === v))
   setVersionSteps(v)
@@ -630,21 +689,106 @@ const disableVersion = (v: string) => {
     stepIndex.value = 0
   }
 }
+const deleteTarget = ref('')
+const deleteStep = ref(1)
+const deleteDialogVisible = ref(false)
+const deleteCountdown = ref(5)
+let deleteTimer: number | null = null
+const startDeleteCountdown = () => {
+  if (deleteTimer) window.clearInterval(deleteTimer)
+  deleteCountdown.value = 5
+  deleteTimer = window.setInterval(() => {
+    deleteCountdown.value -= 1
+    if (deleteCountdown.value <= 0 && deleteTimer) {
+      window.clearInterval(deleteTimer)
+      deleteTimer = null
+    }
+  }, 1000)
+}
 const deleteVersion = (v: string) => {
+  deleteTarget.value = v
+  deleteStep.value = 1
+  deleteDialogVisible.value = true
+  startDeleteCountdown()
+}
+const confirmDeleteStep = () => {
+  if (deleteCountdown.value > 0) return
+  if (deleteStep.value === 1) {
+    deleteStep.value = 2
+    startDeleteCountdown()
+    return
+  }
+  const v = deleteTarget.value
   if (versions[v]) versions[v].exists = false
   if (active.value.startsWith(`${v}-`)) {
     active.value = 'dualuse'
     stepIndex.value = 0
   }
+  try {
+    const id = versions[v]?.id || v
+    deleteTuningModel(id)
+  } catch (e) {
+    ElMessage.error('删除失败')
+  }
+  deleteDialogVisible.value = false
 }
+const createDialogVisible = ref(false)
+const createForm = reactive<{ name: string; creator: string; createdAt: number | null }>({
+  name: '',
+  creator: '',
+  createdAt: null
+})
 const createNewVersion = () => {
+  createForm.name = ''
+  createForm.creator = ''
+  createForm.createdAt = Date.now()
+  createDialogVisible.value = true
+}
+const confirmCreateVersion = async () => {
+  if (!createForm.name || !createForm.creator || !createForm.createdAt) return
   const nums = Object.keys(versions)
     .map((k) => Number(k.replace('v', '')))
     .filter((n) => !Number.isNaN(n))
   const next = Math.max(...nums) + 1
   const key = `v${next}`
-  versions[key] = { exists: true, enabled: false } as any
+  versions[key] = {
+    exists: true,
+    enabled: false,
+    name: createForm.name,
+    creator: createForm.creator,
+    createdAt: Number(createForm.createdAt)
+  } as any
+  try {
+    const resp: any = await createTuningModel({
+      name: createForm.name,
+      creator: createForm.creator,
+      createdAt: Number(createForm.createdAt)
+    })
+    if (resp?.id) versions[key].id = String(resp.id)
+  } catch (e) {
+    ElMessage.error('创建失败')
+  }
+  createDialogVisible.value = false
   enableVersion(key)
+}
+const renameDialogVisible = ref(false)
+const renameTarget = ref('')
+const renameName = ref('')
+const renameVersion = (v: string) => {
+  renameTarget.value = v
+  renameName.value = versions[v]?.name || v.toUpperCase()
+  renameDialogVisible.value = true
+}
+const confirmRenameVersion = () => {
+  const v = renameTarget.value
+  if (versions[v]) versions[v].name = renameName.value
+  try {
+    const id = versions[v]?.id || v
+    renameTuningModel(id, { name: renameName.value })
+  } catch (e) {
+    ElMessage.error('重命名失败')
+  }
+  renameDialogVisible.value = false
 }
 
 const distRef = ref<HTMLDivElement | null>(null)
@@ -876,16 +1020,56 @@ const filteredAll = computed(() => {
   })
 })
 const totalFiltered = computed(() => filteredAll.value.length)
+const sortKey = ref<string>('')
+const sortOrder = ref<'asc' | 'desc' | ''>('')
+const sortedAll = computed(() => {
+  const arr = [...filteredAll.value]
+  const key = sortKey.value
+  const order = sortOrder.value
+  if (!key || !order) return arr
+  const get = (r: any) => {
+    const v = (r as any)[key]
+    if (Array.isArray(v)) return v.join(',')
+    return v
+  }
+  const asNum = (v: any) => {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  arr.sort((a: any, b: any) => {
+    const va = get(a)
+    const vb = get(b)
+    const na = asNum(va)
+    const nb = asNum(vb)
+    let cmp = 0
+    if (na !== null && nb !== null) cmp = na - nb
+    else cmp = String(va ?? '').localeCompare(String(vb ?? ''))
+    return order === 'asc' ? cmp : -cmp
+  })
+  return arr
+})
 const tableRows = computed(() => {
   const start = (uiPage.value - 1) * size.value
   const end = start + size.value
-  return filteredAll.value.slice(start, end)
+  return sortedAll.value.slice(start, end)
 })
 const columnClass = (key: string) => {
   const hasSelection = (colCheckedValues[key] || []).length > 0
   const dialogActive = columnFilterDialogVisible.value && colDialogKey.value === key
-  return hasSelection || dialogActive ? 'col-active-filter' : ''
+  const filterActive = hasSelection || dialogActive
+  const sortActive = sortKey.value === key && !!sortOrder.value
+  return `${filterActive ? 'col-active-filter' : ''} ${sortActive ? 'col-active-sort' : ''}`.trim()
 }
+const toggleSort = (key: string) => {
+  if (sortKey.value !== key) {
+    sortKey.value = key
+    sortOrder.value = 'asc'
+  } else {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : sortOrder.value === 'desc' ? '' : 'asc'
+  }
+}
+const sortBtnClass = (key: string) => (sortKey.value === key && sortOrder.value ? 'active' : '')
+const filterBtnClass = (key: string) => ((colCheckedValues[key] || []).length > 0 ? 'active' : '')
 const openColFilter = async (key: string) => {
   await ensureAllDataLoaded()
   const counts: Record<string, number> = {}
@@ -1017,7 +1201,7 @@ const loadEtps = async () => {
     let list: any[] = []
     outer: for (const p of pages) {
       for (const q of queries) {
-        resp = await getEtpsData({ q, page: p, size: size.value })
+        resp = await getDualUseItems({ q, page: p, size: size.value })
         list = pickList(resp)
         if (list && list.length) {
           page.value = p
@@ -1057,7 +1241,7 @@ const ensureAllDataLoaded = async () => {
     for (let i = 0; i < need.length; i += CONCURRENCY) {
       const batch = need.slice(i, i + CONCURRENCY)
       const resps = await Promise.all(
-        batch.map((p) => getEtpsData({ q, page: p, size: size.value }))
+        batch.map((p) => getDualUseItems({ q, page: p, size: size.value }))
       )
       for (const r of resps) {
         const list = Array.isArray((r as any)?.rows) ? (r as any).rows : Array.isArray(r) ? r : []
@@ -1476,18 +1660,16 @@ const renderVisualBox = () => {
   }
 }
 
+const categoryNamesByK = (k: number): string[] => ['A类', 'B类', 'C类', 'D类', 'E类'].slice(0, k)
 const renderABCPie = () => {
   if (!abcPieRef.value) return
   const chart = echarts.init(abcPieRef.value)
-  const dist = { A: 40, B: 35, C: 25 } as Record<string, number>
-  const total = dist.A + dist.B + dist.C
-  const data = [
-    { name: 'A类', value: dist.A },
-    { name: 'B类', value: dist.B },
-    { name: 'C类', value: dist.C }
-  ]
+  const base: Record<string, number> = { A类: 40, B类: 35, C类: 25, D类: 20, E类: 15 }
+  const cats = categoryNamesByK(checkedKSingle.value)
+  const data = cats.map((c) => ({ name: c, value: base[c] || 10 }))
+  const total = data.reduce((s, d) => s + d.value, 0)
   const option = {
-    title: { text: 'ABC类别占比（饼图）', left: 'center' },
+    title: { text: `${cats.join(' / ')} 类别占比（饼图）`, left: 'center' },
     tooltip: {
       trigger: 'item',
       formatter: (p: any) => `${p.name}: ${p.value} (${Math.round((p.value / total) * 100)}%)`
@@ -1495,6 +1677,10 @@ const renderABCPie = () => {
     series: [{ type: 'pie', radius: ['40%', '70%'], data }]
   }
   chart.setOption(option)
+  chart.on('click', (p: any) => {
+    const name = String(p?.name || '')
+    if (name) openCategory(name)
+  })
   const onResize = () => chart.resize()
   window.addEventListener('resize', onResize)
   return () => {
@@ -1626,11 +1812,31 @@ const renderTopicTrend = () => {
   }
 }
 
-const companyScores = ref([
-  { category: 'A类', class: '两用物项', rating: 'A级', score: 88 },
-  { category: 'B类', class: '两用物项', rating: 'B级', score: 80 },
-  { category: 'C类', class: '两用物项', rating: 'C级', score: 74 }
+const companyScoresBase = ref([
+  { category: 'A类', class: '两用物项', score: 88 },
+  { category: 'B类', class: '两用物项', score: 80 },
+  { category: 'C类', class: '两用物项', score: 74 },
+  { category: 'D类', class: '两用物项', score: 70 },
+  { category: 'E类', class: '两用物项', score: 66 }
 ])
+const companyScoresView = computed(() => {
+  const cats = new Set(categoryNamesByK(checkedKSingle.value))
+  return companyScoresBase.value.filter((r) => cats.has(r.category))
+})
+
+const categoryRows = computed(() => {
+  if (!categoryView.value || !selectedCategory.value) return []
+  const k = checkedKSingle.value
+  const cats = categoryNamesByK(k)
+  const idxOf = (name: string) => cats.indexOf(name)
+  const computeCategory = (r: any) => {
+    const id = Number((r as any).item_id)
+    const seed = Number.isFinite(id) ? id : hash(String((r as any)['Consignee Enterprise'] || ''))
+    const idx = Math.abs(seed) % k
+    return cats[idx]
+  }
+  return (filteredRows.value as any[]).filter((r) => computeCategory(r) === selectedCategory.value)
+})
 
 const tagOptions = ['价格指纹风险高', '物流指纹风险低', '属地指纹风险高']
 const tagAssignments = reactive<Record<string, string[]>>({})
@@ -1744,7 +1950,8 @@ watch(active, () => {
   setTimeout(mountCharts, 0)
 })
 watch(checkedKSingle, () => {
-  if (active.value.endsWith('class')) setTimeout(mountCharts, 0)
+  if (active.value.endsWith('class') || active.value.endsWith('visual') || active.value === 'topic')
+    setTimeout(mountCharts, 0)
 })
 watch(checkedFeatures, () => {
   if (active.value.endsWith('feature')) setTimeout(mountCharts, 0)
@@ -2031,8 +2238,65 @@ onUnmounted(() => {
 }
 .col-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.col-top {
+  font-weight: 600;
+}
+.col-actions {
+  display: flex;
   gap: 6px;
+}
+.col-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--main-bg);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 24px;
+  text-align: center;
+  cursor: pointer;
+}
+.col-btn.active {
+  background: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+.caret-icons {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 2px;
+}
+.caret-icon {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  cursor: pointer;
+}
+.caret-icon.up {
+  border-bottom: 8px solid #9ca3af;
+  margin-bottom: 2px;
+}
+.caret-icon.down {
+  border-top: 8px solid #9ca3af;
+}
+.caret-icon:hover {
+  filter: brightness(1.1);
+}
+.table-wrap :deep(.caret-wrapper) {
+  display: none !important;
+}
+.table-wrap :deep(.el-table__header th.col-active-sort) {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
+.table-wrap :deep(.el-table__body td.col-active-sort) {
+  background: rgba(59, 130, 246, 0.08);
 }
 .filter-icon {
   cursor: pointer;
@@ -2078,8 +2342,24 @@ onUnmounted(() => {
 }
 .shap-compare {
   display: grid;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+.category-view {
+  margin-top: 12px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+.cat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.cat-tip {
+  color: var(--text-secondary);
 }
 .shap-placeholder {
   background: var(--sidebar-bg);

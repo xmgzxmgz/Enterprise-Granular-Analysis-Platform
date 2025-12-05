@@ -88,8 +88,15 @@ export async function updateEnterpriseTags(payload: {
 /**
  * Get policy list.
  */
-export async function getPolicies() {
-  return request<any[]>('/policies')
+export async function getPolicies(
+  params?: Record<string, string | number | boolean | null | undefined>
+) {
+  const qs = new URLSearchParams()
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && String(v).length) qs.append(k, String(v))
+  })
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  return request<any>(`/policies${suffix}`)
 }
 
 /**
@@ -103,19 +110,42 @@ export async function getModelPrepData() {
  * Search detailed enterprise data with pagination.
  * @param params Query parameters
  */
-export async function getEtpsData(params?: {
-  page?: number
-  size?: number
-  q?: string
-  areaId?: string
-  industryPhyName?: string
-  industryCodeName?: string
-  aeoRating?: string
-}) {
+export async function getDualUseItems(params?: { page?: number; size?: number; q?: string }) {
   const qs = new URLSearchParams()
   Object.entries(params || {}).forEach(([k, v]) => {
     if (v !== undefined && v !== null && String(v).length) qs.append(k, String(v))
   })
   const suffix = qs.toString() ? `?${qs.toString()}` : ''
-  return request<any>(`/etps-data${suffix}`)
+  return request<any>(`/dual_use_items${suffix}`)
+}
+
+export async function getDualUseItemsAll(q?: string) {
+  const suffix = q && String(q).length ? `?q=${encodeURIComponent(String(q))}` : ''
+  return request<any>(`/dual_use_items/all${suffix}`)
+}
+
+export async function createTuningModel(payload: {
+  name: string
+  creator: string
+  createdAt: number
+}) {
+  return request<any>('/tuning/models', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function renameTuningModel(idOrName: string, payload: { name: string }) {
+  return request<void>(`/tuning/models/${encodeURIComponent(idOrName)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function deleteTuningModel(idOrName: string) {
+  return request<void>(`/tuning/models/${encodeURIComponent(idOrName)}`, {
+    method: 'DELETE'
+  })
 }

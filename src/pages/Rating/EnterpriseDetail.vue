@@ -20,17 +20,17 @@
       <div v-else class="result-wrap">
         <div class="subtitle">匹配结果（部分基础信息）</div>
         <el-table :data="results" height="360" border stripe @row-click="openDetail">
-          <el-table-column prop="etps_name" label="企业名称" min-width="240" />
-          <el-table-column prop="industry_phy_name" label="行业门类" min-width="160" />
-          <el-table-column prop="industry_code_name" label="行业细分" min-width="160" />
-          <el-table-column prop="area_id" label="区域代码" width="120" />
-          <el-table-column prop="aeo_rating" label="AEO等级" width="120" />
+          <el-table-column :prop="'Consignee Enterprise'" label="收货企业" min-width="240" />
+          <el-table-column :prop="'Registration Location'" label="注册所在地" min-width="160" />
+          <el-table-column :prop="'Industry Category'" label="行业类别" min-width="160" />
         </el-table>
       </div>
     </el-card>
 
     <el-card v-if="detail" class="detail-card">
-      <div class="title">企业信息：{{ detail.etps_name || detail.name }}</div>
+      <div class="title">
+        企业信息：{{ detail['Consignee Enterprise'] || detail.etps_name || detail.name }}
+      </div>
       <div class="detail-rows">
         <div class="row" v-for="it in detailList" :key="it.key">
           <div class="col-left">
@@ -49,7 +49,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getEtpsData } from '@/services/api'
+import { getDualUseItems } from '@/services/api'
 
 type Row = Record<string, any>
 
@@ -65,19 +65,28 @@ const suggestEnterprises = async (
   cb: (items: Array<{ value: string; item: Row }>) => void
 ) => {
   try {
-    const resp = await getEtpsData({ q, size: 10 })
+    const resp = await getDualUseItems({ q, size: 10 })
     let list: Row[] = resp?.rows || resp || []
     if (!list.length) {
-      const all = await getEtpsData({ q: '', size: 50 })
+      const all = await getDualUseItems({ q: '', size: 50 })
       const rows = all?.rows || all || []
-      const k = q.trim()
+      const k = q.trim().toLowerCase()
       list = rows.filter((r: any) => {
-        const name = String(r.etps_name || r.name || '')
-        return k ? name.includes(k) : !!name
+        const fields = ['Consignee Enterprise', 'Registration Location', 'Industry Category']
+        return fields.some((f) =>
+          String(r[f] || '')
+            .toLowerCase()
+            .includes(k)
+        )
       })
     }
     const uniq = Array.from(
-      new Map(list.map((r: any) => [String(r.etps_name || r.name || ''), r])).entries()
+      new Map(
+        list
+          .map((r: any) => String(r['Consignee Enterprise'] || ''))
+          .filter((n) => n.length)
+          .map((n, i) => [n, list[i]])
+      ).entries()
     ).map(([n, r]) => ({ value: n, item: normalizeRow(r) }))
     cb(uniq)
   } catch {
@@ -94,7 +103,7 @@ const onSelectSuggestion = (item: { value: string; item: Row }) => {
 }
 const onSearch = async () => {
   try {
-    const resp = await getEtpsData({ q: keyword.value, size: 50 })
+    const resp = await getDualUseItems({ q: keyword.value, size: 50 })
     const list: Row[] = resp?.rows || resp || []
     results.value = list.map((r) => normalizeRow(r))
     error.value = false
@@ -107,7 +116,7 @@ const openDetail = (row: Row) => {
   detail.value = row
   router.replace({
     name: route.name as string,
-    query: { name: String(row.etps_name || row.name || '') }
+    query: { name: String(row['Consignee Enterprise'] || '') }
   })
 }
 const canonicalMap: Record<string, string> = {

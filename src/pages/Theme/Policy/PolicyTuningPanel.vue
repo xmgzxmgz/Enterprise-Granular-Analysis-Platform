@@ -511,32 +511,83 @@ const tableRows = computed(() => {
 const totalFiltered = computed(() => filteredRows.value.length)
 const onUiPageChange = (p: number) => (uiPage.value = p)
 
-const baseColumns = [
-  { key: 'id', label: 'ID' },
-  { key: 'etps_name', label: '企业名称' },
-  { key: 'industry_phy_name', label: '行业门类' },
-  { key: 'industry_code_name', label: '行业细分' },
-  { key: 'area_id', label: '区域代码' },
-  { key: 'exist_status', label: '经营状态' },
-  { key: 'common_busi', label: '常见业务' },
-  { key: 'import_ratio', label: '进口占比' },
-  { key: 'main_ciq_codes', label: '主要检验检疫代码' },
-  { key: 'main_parent_ciq', label: '主要上级检验检疫' },
-  { key: 'top_trade_countries', label: '主要贸易国家' },
-  { key: 'transport_mode', label: '运输方式' },
-  { key: 'total_decl_amt', label: '申报总金额' },
-  { key: 'total_entry_cnt', label: '入境次数' },
-  { key: 'avg_ticket_val', label: '平均票值' },
-  { key: 'aeo_rating', label: 'AEO等级' },
-  { key: 'delay_rate', label: '延误率' }
+type ColumnDef = { key: string; label: string }
+const baseColumns: ColumnDef[] = [
+  { key: 'item_id', label: 'ID' },
+  { key: 'Regulatory Authority', label: '监管部门' },
+  { key: 'Registration Location', label: '注册所在地' },
+  { key: 'Enterprise Type (Nature)', label: '企业类型（性质）' },
+  { key: 'Enterprise Type (Industry)', label: '企业类型（行业）' },
+  { key: 'Industry Category', label: '行业类别' },
+  { key: 'Customs Broker', label: '报关行' },
+  { key: 'Consignee Enterprise', label: '收货企业' },
+  { key: 'Number of Associated Enterprises', label: '关联企业数量' },
+  { key: 'Specialized, Refined, Unique, New', label: '专精特新' },
+  { key: 'Registered Capital (10k CNY)', label: '注册资本（万元）' },
+  { key: 'Paid-in Capital (10k CNY)', label: '实缴资本（万元）' },
+  { key: 'Legal Person Risk', label: '法人风险' },
+  { key: 'Current Year Import/Export Amount (10k CNY)', label: '当年进出口额（万元）' },
+  { key: 'Past Three Years Import/Export Amount (10k CNY)', label: '近三年进出口额（万元）' },
+  { key: 'Current Year Import/Export Growth Rate', label: '当年进出口增长率' },
+  { key: 'Current Year Tax Amount (10k CNY)', label: '当年税额（万元）' },
+  { key: 'Past Three Years Tax Amount (10k CNY)', label: '近三年税额（万元）' },
+  {
+    key: 'Supervision_Current Year Import/Export Amount (10k CNY)',
+    label: '监管-当年进出口额（万元）'
+  },
+  {
+    key: 'Supervision_Past Three Years Import/Export Amount (10k CNY)',
+    label: '监管-近三年进出口额（万元）'
+  },
+  { key: 'Supervision_Current Year Import/Export Growth Rate', label: '监管-当年进出口增长率' },
+  { key: 'Settlement Exchange Rate', label: '结算汇率' },
+  { key: 'Current Year Customs Enforcement Count', label: '当年海关执法次数' },
+  { key: 'Previous Year Customs Enforcement Count', label: '上年海关执法次数' },
+  { key: 'Current Year Anomaly Count', label: '当年异常次数' },
+  { key: 'Past Three Years Anomaly Count', label: '近三年异常次数' }
 ]
 const preferredOrder = baseColumns.map((c) => c.key)
-const allColumns = computed(() => {
+const allColumns = computed<ColumnDef[]>(() => {
   const keys = new Set(baseColumns.map((c) => c.key))
-  for (const r of filteredRows.value) Object.keys(r).forEach((k) => keys.add(k))
+  for (const r of filteredRows.value) {
+    Object.keys(r).forEach((k) => keys.add(k))
+  }
   return Array.from(keys).map((k) => ({
     key: k,
-    label: baseColumns.find((b) => b.key === k)?.label || k
+    label:
+      baseColumns.find((b) => b.key === k)?.label ||
+      (
+        {
+          item_id: 'ID',
+          'Regulatory Authority': '监管部门',
+          'Registration Location': '注册所在地',
+          'Enterprise Type (Nature)': '企业类型（性质）',
+          'Enterprise Type (Industry)': '企业类型（行业）',
+          'Industry Category': '行业类别',
+          'Customs Broker': '报关行',
+          'Consignee Enterprise': '收货企业',
+          'Number of Associated Enterprises': '关联企业数量',
+          'Specialized, Refined, Unique, New': '专精特新',
+          'Registered Capital (10k CNY)': '注册资本（万元）',
+          'Paid-in Capital (10k CNY)': '实缴资本（万元）',
+          'Legal Person Risk': '法人风险',
+          'Current Year Import/Export Amount (10k CNY)': '当年进出口额（万元）',
+          'Past Three Years Import/Export Amount (10k CNY)': '近三年进出口额（万元）',
+          'Current Year Import/Export Growth Rate': '当年进出口增长率',
+          'Current Year Tax Amount (10k CNY)': '当年税额（万元）',
+          'Past Three Years Tax Amount (10k CNY)': '近三年税额（万元）',
+          'Supervision_Current Year Import/Export Amount (10k CNY)': '监管-当年进出口额（万元）',
+          'Supervision_Past Three Years Import/Export Amount (10k CNY)':
+            '监管-近三年进出口额（万元）',
+          'Supervision_Current Year Import/Export Growth Rate': '监管-当年进出口增长率',
+          'Settlement Exchange Rate': '结算汇率',
+          'Current Year Customs Enforcement Count': '当年海关执法次数',
+          'Previous Year Customs Enforcement Count': '上年海关执法次数',
+          'Current Year Anomaly Count': '当年异常次数',
+          'Past Three Years Anomaly Count': '近三年异常次数'
+        } as Record<string, string>
+      )[k] ||
+      k
   }))
 })
 const hasDataKey = (key: string) =>
@@ -573,7 +624,9 @@ const openFieldFilter = () => (fieldFilterVisible.value = true)
 const resetColumns = () =>
   (checkedColumns.value = orderKeys(baseColumns.map((c) => c.key).filter((k) => hasDataKey(k))))
 const selectAllColumns = () =>
-  (checkedColumns.value = orderKeys(allColumns.value.map((c) => c.key)))
+  (checkedColumns.value = orderKeys(
+    allColumns.value.map((c) => c.key).filter((k) => hasDataKey(k))
+  ))
 const invertColumns = () => {
   const set = new Set(checkedColumns.value)
   checkedColumns.value = orderKeys(allColumns.value.map((c) => c.key).filter((k) => !set.has(k)))
@@ -870,15 +923,65 @@ const applyFilters = () => {
   uiPage.value = 1
 }
 
+const canonicalMap: Record<string, string> = {
+  regulatory_authority: 'Regulatory Authority',
+  registration_location: 'Registration Location',
+  enterprise_type_nature: 'Enterprise Type (Nature)',
+  enterprise_type_industry: 'Enterprise Type (Industry)',
+  industry_category: 'Industry Category',
+  customs_broker: 'Customs Broker',
+  consignee_enterprise: 'Consignee Enterprise',
+  number_of_associated_enterprises: 'Number of Associated Enterprises',
+  specialized_refined_unique_new: 'Specialized, Refined, Unique, New',
+  registered_capital: 'Registered Capital (10k CNY)',
+  paid_in_capital: 'Paid-in Capital (10k CNY)',
+  legal_person_risk: 'Legal Person Risk',
+  current_year_import_export_amt: 'Current Year Import/Export Amount (10k CNY)',
+  past_three_years_import_export_amt: 'Past Three Years Import/Export Amount (10k CNY)',
+  current_year_import_export_growth_rate: 'Current Year Import/Export Growth Rate',
+  current_year_tax_amt: 'Current Year Tax Amount (10k CNY)',
+  past_three_years_tax_amt: 'Past Three Years Tax Amount (10k CNY)',
+  supervision_current_year_import_export_amt:
+    'Supervision_Current Year Import/Export Amount (10k CNY)',
+  supervision_past_three_years_import_export_amt:
+    'Supervision_Past Three Years Import/Export Amount (10k CNY)',
+  supervision_current_year_import_export_growth_rate:
+    'Supervision_Current Year Import/Export Growth Rate',
+  settlement_exchange_rate: 'Settlement Exchange Rate',
+  current_year_customs_enforcement_count: 'Current Year Customs Enforcement Count',
+  previous_year_customs_enforcement_count: 'Previous Year Customs Enforcement Count',
+  current_year_anomaly_count: 'Current Year Anomaly Count',
+  past_three_years_anomaly_count: 'Past Three Years Anomaly Count'
+}
+const normalizeRow = (row: any) => {
+  const out: any = { ...row }
+  Object.entries(canonicalMap).forEach(([alias, raw]) => {
+    const v = out[alias]
+    const cur = out[raw]
+    if (v !== undefined && v !== null && (cur === undefined || cur === null)) out[raw] = v
+    delete out[alias]
+  })
+  return out
+}
 const loadPolicies = async () => {
   try {
-    const list = await getPolicies()
-    rows.splice(0, rows.length, ...list)
+    const resp = await getPolicies({ page: 0, size: size.value, q: '' })
+    const list = Array.isArray((resp as any)?.rows)
+      ? (resp as any).rows
+      : Array.isArray(resp)
+        ? (resp as any)
+        : Array.isArray((resp as any)?.data)
+          ? (resp as any).data
+          : []
+    const norm = (list || []).map((r: any) => normalizeRow(r))
+    rows.splice(0, rows.length, ...norm)
     filteredRows.value = rows
     resetColumns()
     checkedFeatures.value = [...featuresSorted.value]
     const names = Array.from(
-      new Set(rows.map((r: any) => String(r.etps_name || r.name || '')).filter((s) => !!s))
+      new Set(
+        rows.map((r: any) => String((r as any)['Consignee Enterprise'] || '')).filter((s) => !!s)
+      )
     )
     selectedEnterprises.value = names
   } catch {

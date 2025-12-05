@@ -2,11 +2,9 @@
   <div class="panel">
     <div class="left-mini-sidebar">
       <el-menu :default-active="active" class="mini" :unique-opened="true" @select="onSelect">
-        <el-sub-menu index="alg">
-          <template #title>算法（正在使用的算法）</template>
-        </el-sub-menu>
-        <el-menu-item index="prep">前期数据准备</el-menu-item>
-        <el-menu-item index="train">模型训练过程</el-menu-item>
+        <el-menu-item index="alg-current">正在使用的算法介绍</el-menu-item>
+        <el-menu-item index="prep">初筛企业列表</el-menu-item>
+        <el-menu-item index="train">两用物项标签训练</el-menu-item>
       </el-menu>
     </div>
     <div class="right-content">
@@ -63,7 +61,7 @@
       </div>
       <div v-else-if="active === 'prep'" class="box">
         <el-card>
-          <div class="title">前期数据准备（示例数据：敏感物项调优面板前500条）</div>
+          <div class="title">初筛企业列表（仅显示前500条）</div>
           <el-alert
             v-if="prepError"
             type="error"
@@ -73,12 +71,11 @@
           />
           <el-empty v-else-if="prepEmpty" description="后端无数据" />
           <el-table v-else :data="prepRows" height="100%" size="small" border style="width: 100%">
-            <el-table-column type="selection" width="48"></el-table-column>
             <el-table-column
               v-for="col in prepColumns"
               :key="col"
               :prop="col"
-              :label="col"
+              :label="labelCn(col)"
               :show-overflow-tooltip="true"
             >
               <template #default="scope">
@@ -96,21 +93,19 @@
         <el-card>
           <div class="title">模型训练过程</div>
           <el-steps :active="3" finish-status="success">
-            <el-step title="数据分割" description="训练/验证/测试集" />
-            <el-step title="特征工程" description="编码、归一化、处理缺失" />
-            <el-step title="训练" description="XGBoost 100轮" />
-            <el-step title="评估" description="AUC 0.87" />
+            <el-step title="数据筛选" description="用户筛选上传数据" />
+            <el-step
+              title="特征选择"
+              description="从模型接受处理后的 SHAP 图，用户可重新勾选特征回传模型"
+            />
+            <el-step title="分类值选择" description="根据模型处理折线图选择分类值" />
+            <el-step
+              title="标签设置"
+              description="用户根据前后 SHAP 图进行对比，给企业类别设置标签"
+            />
+            <el-step title="可视化展示" description="可视化展示所有的图表" />
           </el-steps>
-          <div class="train-sim">
-            <svg viewBox="0 0 800 100" preserveAspectRatio="none">
-              <polyline points="20,60 220,60 420,60 620,60" class="path" />
-              <circle :cx="dot.x" :cy="dot.y" r="6" class="dot" />
-            </svg>
-            <div class="sim-actions">
-              <el-button type="primary" @click="startSim">开始模拟训练</el-button>
-              <el-button @click="stopSim">停止</el-button>
-            </div>
-          </div>
+          <div class="train-sim"></div>
         </el-card>
       </div>
     </div>
@@ -122,7 +117,7 @@ import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import * as echarts from 'echarts'
-import { getModelPressure, getModelTraining, getEtpsData } from '@/services/api'
+import { getModelPressure, getModelTraining, getDualUseItems } from '@/services/api'
 
 const route = useRoute()
 const active = ref('alg-current')
@@ -218,6 +213,54 @@ const prepColumns = computed(() => {
 const prepError = ref(false)
 const prepEmpty = ref(false)
 
+const fieldLabelMap: Record<string, string> = {
+  item_id: 'ID',
+  'Regulatory Authority': '监管部门',
+  'Registration Location': '注册所在地',
+  'Enterprise Type (Nature)': '企业类型（性质）',
+  'Enterprise Type (Industry)': '企业类型（行业）',
+  'Industry Category': '行业类别',
+  'Customs Broker': '报关行',
+  'Consignee Enterprise': '收货企业',
+  'Number of Associated Enterprises': '关联企业数量',
+  'Specialized, Refined, Unique, New': '专精特新',
+  'Registered Capital (10k CNY)': '注册资本（万元）',
+  'Paid-in Capital (10k CNY)': '实缴资本（万元）',
+  'Legal Person Risk': '法人风险',
+  'Current Year Import/Export Amount (10k CNY)': '当年进出口额（万元）',
+  'Past Three Years Import/Export Amount (10k CNY)': '近三年进出口额（万元）',
+  'Current Year Import/Export Growth Rate': '当年进出口增长率',
+  'Current Year Tax Amount (10k CNY)': '当年税额（万元）',
+  'Past Three Years Tax Amount (10k CNY)': '近三年税额（万元）',
+  'Supervision_Current Year Import/Export Amount (10k CNY)': '监管-当年进出口额（万元）',
+  'Supervision_Past Three Years Import/Export Amount (10k CNY)': '监管-近三年进出口额（万元）',
+  'Supervision_Current Year Import/Export Growth Rate': '监管-当年进出口增长率',
+  'Settlement Exchange Rate': '结算汇率',
+  'Current Year Customs Enforcement Count': '当年海关执法次数',
+  'Previous Year Customs Enforcement Count': '上年海关执法次数',
+  'Current Year Anomaly Count': '当年异常次数',
+  'Past Three Years Anomaly Count': '近三年异常次数'
+}
+const labelCn = (key: string) => {
+  const m = fieldLabelMap[key]
+  if (m) return m
+  const k = key.toLowerCase()
+  if (/[\u4e00-\u9fa5]/.test(key)) return key
+  if (k.includes('name')) return '名称'
+  if (k.includes('industry')) return '行业'
+  if (k.includes('category')) return '类别'
+  if (k.includes('class')) return '分类'
+  if (k.includes('score')) return '评分'
+  if (k.includes('area') || k.includes('region')) return '地区'
+  if (k.includes('rating')) return '评级'
+  if (k.includes('amount') || k.includes('amt')) return '金额'
+  if (k.includes('count') || k.includes('cnt') || k.includes('num')) return '数量'
+  if (k.includes('tax')) return '税额'
+  if (k.includes('risk')) return '风险'
+  if (k.includes('capital')) return '资本'
+  return key
+}
+
 const stressRef = ref<HTMLDivElement | null>(null)
 const trainMetricRef = ref<HTMLDivElement | null>(null)
 const pressureError = ref(false)
@@ -299,7 +342,7 @@ const renderTrainMetric = async () => {
 }
 onMounted(async () => {
   try {
-    const r: any = await getEtpsData({ q: '', page: 0, size: 500 })
+    const r: any = await getDualUseItems({ q: '', page: 0, size: 500 })
     const list = Array.isArray(r?.rows) ? r.rows : Array.isArray(r) ? r : []
     prepRows.value = list.slice(0, 500)
     prepEmpty.value = !prepRows.value.length

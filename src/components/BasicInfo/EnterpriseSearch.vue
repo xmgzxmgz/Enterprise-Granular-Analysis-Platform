@@ -20,7 +20,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getEtpsData } from '@/services/api'
+import { getDualUseItems } from '@/services/api'
 
 const localKeyword = ref('')
 const etpsCache = ref<string[]>([])
@@ -31,7 +31,7 @@ const fetchSuggestions = async (q: string, cb: (list: { value: string }[]) => vo
   const id = ++seq
   const k = q.trim()
   try {
-    const resp = await getEtpsData({ q: k, size: 20 })
+    const resp = await getDualUseItems({ q: k, size: 20 })
     const rows: any[] = resp?.rows || resp || []
     let names = rows
       .map((r) =>
@@ -46,7 +46,7 @@ const fetchSuggestions = async (q: string, cb: (list: { value: string }[]) => vo
       .filter((n) => !!n)
     if (!names.length) {
       if (!etpsCache.value.length) {
-        const all = await getEtpsData({ q: '', size: 100 })
+        const all = await getDualUseItems({ q: '', size: 100 })
         const aRows: any[] = all?.rows || all || []
         etpsCache.value = aRows
           .map((r) =>

@@ -48,7 +48,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: 'key-items',
-            name: '重点物品',
+            name: '重点物品（规划中）',
             component: () => import('@/pages/Theme/KeyItems/Index.vue'),
             meta: {
               breadcrumb: ['分类主题管理', '企业出口风险分类', '重点物品']
@@ -66,7 +66,7 @@ const routes: RouteRecordRaw[] = [
           },
           {
             path: 'cross-border-sensitive-distribution',
-            name: '跨境电商出口敏感指',
+            name: '跨境电商出口敏感指数（规划中）',
             component: () => import('@/pages/Theme/CrossBorder/Index.vue'),
             meta: {
               breadcrumb: ['分类主题管理', '企业出口风险分类', '跨境电商出口敏感指标']
