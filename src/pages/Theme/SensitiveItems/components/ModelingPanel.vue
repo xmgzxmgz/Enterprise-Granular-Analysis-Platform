@@ -1,16 +1,9 @@
 <template>
   <div class="panel">
     <div class="left-mini-sidebar">
-      <el-menu
-        :default-active="active"
-        class="mini"
-        :unique-opened="true"
-        @select="onSelect"
-      >
+      <el-menu :default-active="active" class="mini" :unique-opened="true" @select="onSelect">
         <el-sub-menu index="alg">
-          <template #title>算法</template>
-          <el-menu-item index="alg-current">正在使用的算法</el-menu-item>
-          <el-menu-item index="alg-optional">可选算法</el-menu-item>
+          <template #title>算法（正在使用的算法）</template>
         </el-sub-menu>
         <el-menu-item index="prep">前期数据准备</el-menu-item>
         <el-menu-item index="train">模型训练过程</el-menu-item>
@@ -19,66 +12,15 @@
     <div class="right-content">
       <div v-if="active === 'alg-current'" class="box">
         <el-card>
-          <div class="title">正在使用的算法：XGBoost</div>
-          <div class="diagram">
-            <el-tooltip
-              content="原始输入数据，来源于企业交易等"
-              placement="top"
-            >
-              <div
-                class="node"
-                @mouseenter="hover = '输入'"
-                @mouseleave="hover = ''"
-              >
-                输入
-              </div>
-            </el-tooltip>
-            <div class="arrow">→</div>
-            <el-tooltip content="编码、标准化、缺失处理等" placement="top">
-              <div
-                class="node"
-                @mouseenter="hover = '特征工程'"
-                @mouseleave="hover = ''"
-              >
-                特征工程
-              </div>
-            </el-tooltip>
-            <div class="arrow">→</div>
-            <el-tooltip content="训练100轮，学习率等参数可调" placement="top">
-              <div
-                class="node"
-                @mouseenter="hover = 'XGBoost'"
-                @mouseleave="hover = ''"
-              >
-                XGBoost
-              </div>
-            </el-tooltip>
-            <div class="arrow">→</div>
-            <el-tooltip content="AUC、F1、召回等综合评估" placement="top">
-              <div
-                class="node"
-                @mouseenter="hover = '评估'"
-                @mouseleave="hover = ''"
-              >
-                评估
-              </div>
-            </el-tooltip>
-            <svg
-              ref="simSvgRef"
-              class="sim"
-              viewBox="0 0 800 120"
-              preserveAspectRatio="none"
-            >
-              <polyline :points="polyPoints" class="path" />
-              <circle :cx="dot.x" :cy="dot.y" r="6" class="dot" />
-            </svg>
-            <div class="sim-actions">
-              <el-button type="primary" @click="startSim"
-                >开始模拟训练</el-button
-              >
-              <el-button @click="stopSim">停止</el-button>
-              <div class="hover-tip" v-if="hover">{{ hover }} 详情提示</div>
-            </div>
+          <div class="title">两用物项算法示意图</div>
+          <div class="diagram-img">
+            <template v-if="!imgError">
+              <img :src="modelingFlowSrc" alt="建模流程图" @error="imgError = true" />
+            </template>
+            <el-empty
+              v-else
+              description="流程图图片未找到：请放置到 public/assets/modeling-flow.jpg"
+            />
           </div>
           <div class="charts">
             <div class="chart-wrap">
@@ -90,7 +32,6 @@
                 closable
               />
               <el-empty v-else-if="pressureEmpty" description="后端无数据" />
-              <div v-else ref="stressRef" class="chart" />
             </div>
             <div class="chart-wrap">
               <el-alert
@@ -101,7 +42,6 @@
                 closable
               />
               <el-empty v-else-if="trainingEmpty" description="后端无数据" />
-              <div v-else ref="trainMetricRef" class="chart" />
             </div>
           </div>
         </el-card>
@@ -110,11 +50,7 @@
         <el-card>
           <div class="title">可选算法流程图</div>
           <div class="actions" style="margin-bottom: 8px">
-            <el-radio-group
-              v-model="selectedAlg"
-              size="small"
-              @change="onAlgChange"
-            >
+            <el-radio-group v-model="selectedAlg" size="small" @change="onAlgChange">
               <el-radio-button label="LightGBM" />
               <el-radio-button label="RandomForest" />
               <el-radio-button label="SVM" />
@@ -127,17 +63,32 @@
       </div>
       <div v-else-if="active === 'prep'" class="box">
         <el-card>
-          <div class="title">前期数据准备</div>
-          <el-table :data="prepData" height="360">
-            <el-table-column prop="name" label="字段" width="180" sortable />
-            <el-table-column prop="type" label="类型" width="120" />
+          <div class="title">前期数据准备（示例数据：敏感物项调优面板前500条）</div>
+          <el-alert
+            v-if="prepError"
+            type="error"
+            :title="'后端不可联通或错误'"
+            show-icon
+            closable
+          />
+          <el-empty v-else-if="prepEmpty" description="后端无数据" />
+          <el-table v-else :data="prepRows" height="100%" size="small" border style="width: 100%">
+            <el-table-column type="selection" width="48"></el-table-column>
             <el-table-column
-              prop="missing"
-              label="缺失率"
-              width="120"
-              sortable
-            />
-            <el-table-column prop="desc" label="说明" />
+              v-for="col in prepColumns"
+              :key="col"
+              :prop="col"
+              :label="col"
+              :show-overflow-tooltip="true"
+            >
+              <template #default="scope">
+                {{
+                  Array.isArray(scope.row[col])
+                    ? scope.row[col].join(',')
+                    : String(scope.row[col] ?? '')
+                }}
+              </template>
+            </el-table-column>
           </el-table>
         </el-card>
       </div>
@@ -156,9 +107,7 @@
               <circle :cx="dot.x" :cy="dot.y" r="6" class="dot" />
             </svg>
             <div class="sim-actions">
-              <el-button type="primary" @click="startSim"
-                >开始模拟训练</el-button
-              >
+              <el-button type="primary" @click="startSim">开始模拟训练</el-button>
               <el-button @click="stopSim">停止</el-button>
             </div>
           </div>
@@ -169,193 +118,202 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
-import { VueFlow, useVueFlow } from "@vue-flow/core";
-import * as echarts from "echarts";
-import { getModelPressure, getModelTraining } from "@/services/api";
+import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { VueFlow, useVueFlow } from '@vue-flow/core'
+import * as echarts from 'echarts'
+import { getModelPressure, getModelTraining, getEtpsData } from '@/services/api'
 
-const route = useRoute();
-const active = ref("alg-current");
+const route = useRoute()
+const active = ref('alg-current')
 const syncActive = () => {
-  const p = String(route.query.panelActive || "");
-  if (p) active.value = p;
-};
-syncActive();
-watch(() => route.query.panelActive, syncActive);
-const hover = ref("");
-const simSvgRef = ref<SVGElement | null>(null);
-const dot = ref({ x: 20, y: 60 });
+  const p = String(route.query.panelActive || '')
+  if (p) active.value = p
+}
+syncActive()
+watch(() => route.query.panelActive, syncActive)
+const imgError = ref(false)
+const modelingFlowSrc = import.meta.env.BASE_URL + 'assets/modeling-flow.jpg'
+const dot = ref({ x: 20, y: 60 })
 const points = [
   { x: 20, y: 60 },
   { x: 220, y: 60 },
   { x: 420, y: 60 },
-  { x: 620, y: 60 },
-];
-const polyPoints = points.map((p) => `${p.x},${p.y}`).join(" ");
-let simTimer: number | null = null;
-let seg = 0;
-let t = 0;
+  { x: 620, y: 60 }
+]
+let simTimer: number | null = null
+let seg = 0
+let t = 0
 const startSim = () => {
-  stopSim();
-  seg = 0;
-  t = 0;
+  stopSim()
+  seg = 0
+  t = 0
   simTimer = window.setInterval(() => {
-    const a = points[seg];
-    const b = points[Math.min(seg + 1, points.length - 1)];
-    t += 0.02;
-    dot.value.x = a.x + (b.x - a.x) * t;
-    dot.value.y = a.y + (b.y - a.y) * t;
+    const a = points[seg]
+    const b = points[Math.min(seg + 1, points.length - 1)]
+    t += 0.02
+    dot.value.x = a.x + (b.x - a.x) * t
+    dot.value.y = a.y + (b.y - a.y) * t
     if (t >= 1) {
-      t = 0;
-      seg += 1;
+      t = 0
+      seg += 1
       if (seg >= points.length - 1) {
-        stopSim();
+        stopSim()
       }
     }
-  }, 16);
-};
+  }, 16)
+}
 const stopSim = () => {
-  if (simTimer) window.clearInterval(simTimer);
-  simTimer = null;
-};
+  if (simTimer) window.clearInterval(simTimer)
+  simTimer = null
+}
 const onSelect = (index: string) => {
-  active.value = index;
-};
+  active.value = index
+}
 const nodes = ref([
-  { id: "1", position: { x: 0, y: 0 }, label: "输入" },
-  { id: "2", position: { x: 180, y: 0 }, label: "特征工程" },
-  { id: "3", position: { x: 360, y: 0 }, label: "XGBoost" },
-  { id: "4", position: { x: 540, y: 0 }, label: "评估" },
-]);
+  { id: '1', position: { x: 0, y: 0 }, label: '输入' },
+  { id: '2', position: { x: 180, y: 0 }, label: '特征工程' },
+  { id: '3', position: { x: 360, y: 0 }, label: 'XGBoost' },
+  { id: '4', position: { x: 540, y: 0 }, label: '评估' }
+])
 const edges = ref([
-  { id: "e1-2", source: "1", target: "2" },
-  { id: "e2-3", source: "2", target: "3" },
-  { id: "e3-4", source: "3", target: "4" },
-]);
+  { id: 'e1-2', source: '1', target: '2' },
+  { id: 'e2-3', source: '2', target: '3' },
+  { id: 'e3-4', source: '3', target: '4' }
+])
 
 const algOptions = ref([
-  { name: "LightGBM", type: "梯度提升", desc: "高效、快速" },
-  { name: "RandomForest", type: "集成学习", desc: "鲁棒性强" },
-  { name: "SVM", type: "监督学习", desc: "间隔最大化" },
-]);
+  { name: 'LightGBM', type: '梯度提升', desc: '高效、快速' },
+  { name: 'RandomForest', type: '集成学习', desc: '鲁棒性强' },
+  { name: 'SVM', type: '监督学习', desc: '间隔最大化' }
+])
 
-const selectedAlg = ref("LightGBM");
+const selectedAlg = ref('LightGBM')
 const optNodes = ref<any[]>([
-  { id: "o1", position: { x: 0, y: 40 }, label: "输入" },
-  { id: "o2", position: { x: 220, y: 40 }, label: "特征工程" },
-  { id: "o3", position: { x: 440, y: 40 }, label: selectedAlg.value },
-  { id: "o4", position: { x: 660, y: 40 }, label: "评估" },
-]);
+  { id: 'o1', position: { x: 0, y: 40 }, label: '输入' },
+  { id: 'o2', position: { x: 220, y: 40 }, label: '特征工程' },
+  { id: 'o3', position: { x: 440, y: 40 }, label: selectedAlg.value },
+  { id: 'o4', position: { x: 660, y: 40 }, label: '评估' }
+])
 const optEdges = ref<any[]>([
-  { id: "oe1-2", source: "o1", target: "o2" },
-  { id: "oe2-3", source: "o2", target: "o3" },
-  { id: "oe3-4", source: "o3", target: "o4" },
-]);
+  { id: 'oe1-2', source: 'o1', target: 'o2' },
+  { id: 'oe2-3', source: 'o2', target: 'o3' },
+  { id: 'oe3-4', source: 'o3', target: 'o4' }
+])
 const onAlgChange = () => {
   optNodes.value = [
-    { id: "o1", position: { x: 0, y: 40 }, label: "输入" },
-    { id: "o2", position: { x: 220, y: 40 }, label: "特征工程" },
-    { id: "o3", position: { x: 440, y: 40 }, label: selectedAlg.value },
-    { id: "o4", position: { x: 660, y: 40 }, label: "评估" },
-  ];
-};
+    { id: 'o1', position: { x: 0, y: 40 }, label: '输入' },
+    { id: 'o2', position: { x: 220, y: 40 }, label: '特征工程' },
+    { id: 'o3', position: { x: 440, y: 40 }, label: selectedAlg.value },
+    { id: 'o4', position: { x: 660, y: 40 }, label: '评估' }
+  ]
+}
 
-const prepData = ref([
-  { name: "交易金额", type: "float", missing: "2.1%", desc: "单位：万元" },
-  { name: "商品类别", type: "category", missing: "0.0%", desc: "编码映射" },
-  { name: "出口地区", type: "category", missing: "1.2%", desc: "省市编码" },
-  { name: "物流时长", type: "int", missing: "0.7%", desc: "单位：天" },
-]);
+const prepRows = ref<any[]>([])
+const prepColumns = computed(() => {
+  const set = new Set<string>()
+  for (const r of prepRows.value.slice(0, 10)) Object.keys(r || {}).forEach((k) => set.add(k))
+  return Array.from(set)
+})
+const prepError = ref(false)
+const prepEmpty = ref(false)
 
-const stressRef = ref<HTMLDivElement | null>(null);
-const trainMetricRef = ref<HTMLDivElement | null>(null);
-const pressureError = ref(false);
-const pressureEmpty = ref(false);
-const trainingError = ref(false);
-const trainingEmpty = ref(false);
-const disposers: (() => void)[] = [];
+const stressRef = ref<HTMLDivElement | null>(null)
+const trainMetricRef = ref<HTMLDivElement | null>(null)
+const pressureError = ref(false)
+const pressureEmpty = ref(false)
+const trainingError = ref(false)
+const trainingEmpty = ref(false)
+const disposers: (() => void)[] = []
 const renderStress = async () => {
-  if (!stressRef.value) return;
-  const chart = echarts.init(stressRef.value);
-  let qps: number[] = [];
-  let time: number[] = [];
+  if (!stressRef.value) return
+  const chart = echarts.init(stressRef.value)
+  let qps: number[] = []
+  let time: number[] = []
   try {
-    const data = await getModelPressure();
-    if (Array.isArray(data?.qps)) qps = data.qps;
-    if (Array.isArray(data?.time)) time = data.time;
+    const data = await getModelPressure()
+    if (Array.isArray(data?.qps)) qps = data.qps
+    if (Array.isArray(data?.time)) time = data.time
   } catch {
-    pressureError.value = true;
+    pressureError.value = true
   }
   if (!qps.length || !time.length) {
-    pressureEmpty.value = !pressureError.value;
-    chart.dispose();
-    return;
+    pressureEmpty.value = !pressureError.value
+    chart.dispose()
+    return
   }
   chart.setOption({
-    title: { text: "算法压力测试（QPS/耗时）" },
-    tooltip: { trigger: "axis" },
-    legend: { data: ["QPS", "耗时(ms)"] },
-    xAxis: { type: "category", data: ["XGBoost", "LightGBM", "RF", "SVM"] },
-    yAxis: { type: "value" },
+    title: { text: '算法压力测试（QPS/耗时）' },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['QPS', '耗时(ms)'] },
+    xAxis: { type: 'category', data: ['XGBoost', 'LightGBM', 'RF', 'SVM'] },
+    yAxis: { type: 'value' },
     series: [
-      { name: "QPS", type: "bar", data: qps, itemStyle: { color: "#3b82f6" } },
-      { name: "耗时(ms)", type: "line", data: time },
-    ],
-  });
-  const onResize = () => chart.resize();
-  window.addEventListener("resize", onResize);
+      { name: 'QPS', type: 'bar', data: qps, itemStyle: { color: '#3b82f6' } },
+      { name: '耗时(ms)', type: 'line', data: time }
+    ]
+  })
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener("resize", onResize);
-    chart.dispose();
-  };
-};
+    window.removeEventListener('resize', onResize)
+    chart.dispose()
+  }
+}
 const renderTrainMetric = async () => {
-  if (!trainMetricRef.value) return;
-  const chart = echarts.init(trainMetricRef.value);
-  let auc: number[] = [];
-  let loss: number[] = [];
+  if (!trainMetricRef.value) return
+  const chart = echarts.init(trainMetricRef.value)
+  let auc: number[] = []
+  let loss: number[] = []
   try {
-    const data = await getModelTraining();
-    if (Array.isArray(data?.auc)) auc = data.auc;
-    if (Array.isArray(data?.loss)) loss = data.loss;
+    const data = await getModelTraining()
+    if (Array.isArray(data?.auc)) auc = data.auc
+    if (Array.isArray(data?.loss)) loss = data.loss
   } catch {
-    trainingError.value = true;
+    trainingError.value = true
   }
   if (!auc.length || !loss.length) {
-    trainingEmpty.value = !trainingError.value;
-    chart.dispose();
-    return;
+    trainingEmpty.value = !trainingError.value
+    chart.dispose()
+    return
   }
   chart.setOption({
-    title: { text: "训练过程指标（AUC/损失）" },
-    tooltip: { trigger: "axis" },
+    title: { text: '训练过程指标（AUC/损失）' },
+    tooltip: { trigger: 'axis' },
     xAxis: {
-      type: "category",
-      data: Array.from({ length: 10 }, (_, i) => `迭代${i + 1}`),
+      type: 'category',
+      data: Array.from({ length: 10 }, (_, i) => `迭代${i + 1}`)
     },
-    yAxis: { type: "value" },
+    yAxis: { type: 'value' },
     series: [
-      { name: "AUC", type: "line", data: auc },
-      { name: "Loss", type: "line", data: loss },
-    ],
-  });
-  const onResize = () => chart.resize();
-  window.addEventListener("resize", onResize);
+      { name: 'AUC', type: 'line', data: auc },
+      { name: 'Loss', type: 'line', data: loss }
+    ]
+  })
+  const onResize = () => chart.resize()
+  window.addEventListener('resize', onResize)
   return () => {
-    window.removeEventListener("resize", onResize);
-    chart.dispose();
-  };
-};
+    window.removeEventListener('resize', onResize)
+    chart.dispose()
+  }
+}
 onMounted(async () => {
-  const d1 = await renderStress();
-  if (d1) disposers.push(d1);
-  const d2 = await renderTrainMetric();
-  if (d2) disposers.push(d2);
-});
+  try {
+    const r: any = await getEtpsData({ q: '', page: 0, size: 500 })
+    const list = Array.isArray(r?.rows) ? r.rows : Array.isArray(r) ? r : []
+    prepRows.value = list.slice(0, 500)
+    prepEmpty.value = !prepRows.value.length
+  } catch {
+    prepError.value = true
+  }
+  const d1 = await renderStress()
+  if (d1) disposers.push(d1)
+  const d2 = await renderTrainMetric()
+  if (d2) disposers.push(d2)
+})
 onUnmounted(() => {
-  disposers.forEach((d) => d());
-});
+  disposers.forEach((d) => d())
+})
 </script>
 
 <style scoped>
@@ -391,6 +349,19 @@ onUnmounted(() => {
   gap: 12px;
   position: relative;
   padding: 12px;
+}
+.diagram-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+.diagram-img img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--sidebar-bg);
 }
 .node {
   padding: 8px 16px;

@@ -91,9 +91,9 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'policy-benefits',
-        name: '政策惠企',
+        name: '政策推送',
         component: () => import('@/pages/Theme/Policy/Placeholder.vue'),
-        meta: { breadcrumb: ['分类主题管理', '政策惠企'] }
+        meta: { breadcrumb: ['分类主题管理', '政策推送'] }
       }
     ]
   },
@@ -107,12 +107,6 @@ const routes: RouteRecordRaw[] = [
         name: '企业分类评级画像',
         component: () => import('@/pages/Common/RootNavigator.vue'),
         props: { basePath: '/rating-profile', title: '企业分类评级画像' }
-      },
-      {
-        path: 'basic-info',
-        name: '企业基本信息',
-        component: () => import('@/pages/Rating/BasicInfo.vue'),
-        meta: { breadcrumb: ['企业分类评级画像', '企业基本信息'] }
       },
       {
         path: 'tags',
@@ -141,12 +135,6 @@ const routes: RouteRecordRaw[] = [
             }
           }
         ]
-      },
-      {
-        path: 'search-results',
-        name: '企业搜索结果',
-        component: () => import('@/pages/Rating/SearchResults.vue'),
-        meta: { breadcrumb: ['企业分类评级画像', '企业搜索结果'] }
       },
       {
         path: 'enterprise-detail',

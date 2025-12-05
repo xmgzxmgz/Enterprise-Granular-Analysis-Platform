@@ -1,11 +1,11 @@
 <template>
   <div class="panel">
-    <TuningPanel />
+    <PolicyTuningPanel />
   </div>
 </template>
 
 <script setup lang="ts">
-import TuningPanel from '@/pages/Theme/SensitiveItems/components/TuningPanel.vue'
+import PolicyTuningPanel from '@/pages/Theme/Policy/PolicyTuningPanel.vue'
 </script>
 
 <style scoped>

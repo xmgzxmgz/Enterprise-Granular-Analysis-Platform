@@ -152,7 +152,19 @@
             <el-table :data="companyScores" height="300">
               <el-table-column prop="category" label="类别" width="160" />
               <el-table-column prop="class" label="分类" width="120" />
-              <el-table-column prop="rating" label="评级" width="120" />
+              <el-table-column prop="rating" label="评级" width="220">
+                <template #default="scope">
+                  <el-space wrap>
+                    <el-tag
+                      v-for="t in tagAssignments[scope.row.category] || []"
+                      :key="t"
+                      type="info"
+                      size="small"
+                      >{{ t }}</el-tag
+                    >
+                  </el-space>
+                </template>
+              </el-table-column>
               <el-table-column prop="score" label="评分" width="120" />
             </el-table>
           </div>
@@ -198,8 +210,8 @@
               <el-step title="数据筛选" @click="goStep(0)" />
               <el-step title="特征选择" @click="goStep(1)" />
               <el-step title="分类值调整" @click="goStep(2)" />
-              <el-step title="可视化展示" @click="goStep(3)" />
-              <el-step title="标签配置" @click="goStep(4)" />
+              <el-step title="标签配置" @click="goStep(3)" />
+              <el-step title="可视化展示" @click="goStep(4)" />
             </el-steps>
           </div>
           <div class="tools-fixed">
@@ -349,8 +361,8 @@
             <el-step title="数据筛选" @click="goStep(0)" />
             <el-step title="特征选择" @click="goStep(1)" />
             <el-step title="分类值调整" @click="goStep(2)" />
-            <el-step title="可视化展示" @click="goStep(3)" />
-            <el-step title="标签配置" @click="goStep(4)" />
+            <el-step title="标签配置" @click="goStep(3)" />
+            <el-step title="可视化展示" @click="goStep(4)" />
           </el-steps>
         </div>
         <div class="feature-wrap">
@@ -401,15 +413,15 @@
             <el-step title="数据筛选" @click="goStep(0)" />
             <el-step title="特征选择" @click="goStep(1)" />
             <el-step title="分类值调整" @click="goStep(2)" />
-            <el-step title="可视化展示" @click="goStep(3)" />
-            <el-step title="标签配置" @click="goStep(4)" />
+            <el-step title="标签配置" @click="goStep(3)" />
+            <el-step title="可视化展示" @click="goStep(4)" />
           </el-steps>
         </div>
         <div ref="classRef" class="chart" />
         <div class="k-select-row">
-          <el-checkbox-group v-model="checkedK" class="k-checkboxes">
-            <el-checkbox v-for="k in kOptions" :key="'chk-' + k" :label="k" />
-          </el-checkbox-group>
+          <el-radio-group v-model="checkedKSingle" class="k-checkboxes">
+            <el-radio v-for="k in kOptions" :key="'rad-' + k" :label="k" />
+          </el-radio-group>
         </div>
         <div class="footer footer-fixed floating-footer" :style="footerFixedStyle">
           <el-button @click="reset">重置</el-button>
@@ -429,8 +441,8 @@
             <el-step title="数据筛选" @click="goStep(0)" />
             <el-step title="特征选择" @click="goStep(1)" />
             <el-step title="分类值调整" @click="goStep(2)" />
-            <el-step title="可视化展示" @click="goStep(3)" />
-            <el-step title="标签配置" @click="goStep(4)" />
+            <el-step title="标签配置" @click="goStep(3)" />
+            <el-step title="可视化展示" @click="goStep(4)" />
           </el-steps>
         </div>
         <div class="visual-wrap">
@@ -485,30 +497,40 @@
             <el-step title="数据筛选" @click="goStep(0)" />
             <el-step title="特征选择" @click="goStep(1)" />
             <el-step title="分类值调整" @click="goStep(2)" />
-            <el-step title="可视化展示" @click="goStep(3)" />
-            <el-step title="标签配置" @click="goStep(4)" />
+            <el-step title="标签配置" @click="goStep(3)" />
+            <el-step title="可视化展示" @click="goStep(4)" />
           </el-steps>
         </div>
-        <el-table :data="tagRows" height="420">
-          <el-table-column prop="name" label="企业" width="160" />
-          <el-table-column prop="feature" label="特征" />
-          <el-table-column prop="slice" label="切片" width="140" />
-          <el-table-column prop="expert" label="专家评级" width="220">
-            <template #default="scope">
-              <el-select
-                v-model="scope.row.expert"
-                placeholder="选择或自定义"
-                filterable
-                allow-create
-                default-first-option
-              >
-                <el-option label="两用物品价格指纹风险高" value="两用物品价格指纹风险高" />
-                <el-option label="两用物品物流指纹风险低" value="两用物品物流指纹风险低" />
-                <el-option label="两用物品属地指纹风险高" value="两用物品属地指纹风险高" />
-              </el-select>
-            </template>
-          </el-table-column>
-        </el-table>
+        <div class="tag-layout">
+          <div class="shap-compare">
+            <div class="shap-placeholder">预留：SHAP 对比图（上）</div>
+            <div class="shap-placeholder">预留：SHAP 对比图（下）</div>
+          </div>
+          <div class="tag-assign">
+            <div class="title">企业标签打标</div>
+            <el-table :data="companyScores" height="420">
+              <el-table-column prop="category" label="类别" width="120" />
+              <el-table-column prop="class" label="分类" width="120" />
+              <el-table-column prop="rating" label="评级" width="120" />
+              <el-table-column prop="score" label="评分" width="100" />
+              <el-table-column label="标签">
+                <template #default="scope">
+                  <el-select
+                    v-model="tagAssignments[scope.row.category]"
+                    multiple
+                    filterable
+                    allow-create
+                    default-first-option
+                    placeholder="选择或自定义标签"
+                    style="width: 100%"
+                  >
+                    <el-option v-for="t in tagOptions" :key="t" :label="t" :value="t" />
+                  </el-select>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </div>
         <div class="footer footer-fixed floating-footer" :style="footerFixedStyle">
           <el-button @click="reset">重置</el-button>
           <el-button type="success" @click="finish">完成</el-button>
@@ -545,7 +567,7 @@ const steps = ref<string[]>([])
 const stepIndex = ref(0)
 const versionOf = (k: string) => (k.includes('-') ? k.split('-')[0] : k)
 const setVersionSteps = (v: string) => {
-  steps.value = ['filter', 'feature', 'class', 'visual', 'tag'].map((t) => `${v}-${t}`)
+  steps.value = ['filter', 'feature', 'class', 'tag', 'visual'].map((t) => `${v}-${t}`)
 }
 const goStep = (i: number) => {
   stepIndex.value = i
@@ -782,7 +804,6 @@ const filteredRows = ref(rows)
 const uiPage = ref(1)
 const onUiPageChange = (p: number) => (uiPage.value = p)
 const loadingAll = ref(false)
-const columnFilterVisible = reactive<Record<string, boolean>>({})
 const colCheckedValues = reactive<Record<string, string[]>>({})
 const colFilterOptions = reactive<Record<string, string[]>>({})
 const colFilterCounts = reactive<Record<string, Record<string, number>>>({})
@@ -829,16 +850,29 @@ const colDialogMaxHeight = computed(() => {
 const filteredAll = computed(() => {
   const base = filteredRows.value as any[]
   const keys = Object.keys(colCheckedValues).filter((k) => (colCheckedValues[k] || []).length)
-  if (!keys.length) return base
-  return base.filter((r) => {
-    for (const k of keys) {
-      const sel = colCheckedValues[k]
-      const val = Array.isArray((r as any)[k])
-        ? (r as any)[k].map((x: any) => String(x ?? ''))
-        : [String((r as any)[k] ?? '')]
-      if (!val.some((v: string) => sel.includes(v))) return false
+  const keyword = filterKeyword.value.trim().toLowerCase()
+  const visibleKeys = new Set(visibleColumns.value.map((c) => c.key))
+  const byFilter = !keys.length
+    ? base
+    : base.filter((r) => {
+        for (const k of keys) {
+          const sel = colCheckedValues[k]
+          const val = Array.isArray((r as any)[k])
+            ? (r as any)[k].map((x: any) => String(x ?? ''))
+            : [String((r as any)[k] ?? '')]
+          if (!val.some((v: string) => sel.includes(v))) return false
+        }
+        return true
+      })
+  if (!keyword) return byFilter
+  return byFilter.filter((r) => {
+    for (const k of Object.keys(r)) {
+      if (!visibleKeys.has(k)) continue
+      const v = (r as any)[k]
+      const s = Array.isArray(v) ? v.join(',') : String(v ?? '')
+      if (s.toLowerCase().includes(keyword)) return true
     }
-    return true
+    return false
   })
 })
 const totalFiltered = computed(() => filteredAll.value.length)
@@ -847,8 +881,11 @@ const tableRows = computed(() => {
   const end = start + size.value
   return filteredAll.value.slice(start, end)
 })
-const columnClass = (key: string) =>
-  (colCheckedValues[key] || []).length ? 'col-active-filter' : ''
+const columnClass = (key: string) => {
+  const hasSelection = (colCheckedValues[key] || []).length > 0
+  const dialogActive = columnFilterDialogVisible.value && colDialogKey.value === key
+  return hasSelection || dialogActive ? 'col-active-filter' : ''
+}
 const openColFilter = async (key: string) => {
   await ensureAllDataLoaded()
   const counts: Record<string, number> = {}
@@ -903,7 +940,7 @@ const toBasic = (row: any) => {
 }
 // 后端数据接入
 const page = ref(0)
-const size = ref(20)
+const size = ref(100)
 const total = ref(0)
 const loadedPages = ref<Set<number>>(new Set<number>())
 const canonicalMap: Record<string, string> = {
@@ -950,7 +987,7 @@ const normalizeRow = (row: any) => {
   return out
 }
 const loadEtps = async () => {
-  const q0 = filterKeyword.value.trim()
+  const q0 = ''
   const pages = [page.value, 0, 1]
   const queries = [q0, '', undefined]
   const pickList = (r: any): any[] =>
@@ -1008,7 +1045,7 @@ const ensureAllDataLoaded = async () => {
   const totalCount = total.value || 0
   const pagesCount = Math.ceil(totalCount / size.value)
   if (!pagesCount || rows.length >= totalCount) return
-  const q = filterKeyword.value.trim()
+  const q = ''
   const need: number[] = []
   for (let p = 0; p < pagesCount; p++) {
     if (!loadedPages.value.has(p)) need.push(p)
@@ -1055,7 +1092,7 @@ const fetchAllData = async () => {
   }
 }
 watch(filterKeyword, () => {
-  loadEtps()
+  uiPage.value = 1
 })
 
 // 字段列管理与筛选
@@ -1331,7 +1368,8 @@ const onRangeChange = () => {
 }
 
 const kOptions = [2, 3, 4, 5]
-const checkedK = ref<number[]>([2, 3, 4, 5])
+const checkedKSingle = ref<number>(2)
+const checkedK = computed<number[]>(() => [checkedKSingle.value])
 const renderClass = () => {
   if (!classRef.value) return
   const chart = echarts.init(classRef.value)
@@ -1594,6 +1632,9 @@ const companyScores = ref([
   { category: 'C类', class: '两用物项', rating: 'C级', score: 74 }
 ])
 
+const tagOptions = ['价格指纹风险高', '物流指纹风险低', '属地指纹风险高']
+const tagAssignments = reactive<Record<string, string[]>>({})
+
 const tagRows = ref<{ name: string; feature: string; slice: string; expert?: string }[]>([])
 const refreshTagRows = () => {
   const names = selectedEnterprises.value.length ? selectedEnterprises.value : []
@@ -1615,7 +1656,7 @@ const updatedScores = ref<any[]>([])
 const reset = () => {
   filterKeyword.value = ''
   checkedFeatures.value = [...featuresSorted.value]
-  checkedK.value = [2, 3, 4, 5]
+  checkedKSingle.value = 2
 }
 const finish = () => {
   if (!filteredRows.value.length) {
@@ -1675,6 +1716,7 @@ const mountCharts = async () => {
 
 onMounted(async () => {
   await loadEtps()
+  await fetchAllData()
   boxMetric.value = featuresSorted.value[0] || ''
   mountCharts()
   updateToolbarWidth()
@@ -1701,7 +1743,7 @@ watch(active, () => {
   }
   setTimeout(mountCharts, 0)
 })
-watch(checkedK, () => {
+watch(checkedKSingle, () => {
   if (active.value.endsWith('class')) setTimeout(mountCharts, 0)
 })
 watch(checkedFeatures, () => {
@@ -1873,6 +1915,10 @@ onUnmounted(() => {
   border-radius: 8px;
   padding: 8px;
 }
+.importance-chart .chart {
+  height: 630px;
+  width: 950px;
+}
 .feature-item {
   display: flex;
   align-items: center;
@@ -2023,6 +2069,33 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   width: 100%;
+}
+.tag-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.shap-compare {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+}
+.shap-placeholder {
+  background: var(--sidebar-bg);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+.tag-assign {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
 }
 .after {
   margin-top: 12px;

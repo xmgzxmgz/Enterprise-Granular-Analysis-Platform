@@ -34,9 +34,7 @@
         <div class="notify-list">
           <div class="notify-header">
             <span>消息通知</span>
-            <el-button link size="small" @click="clearNotifications"
-              >清空</el-button
-            >
+            <el-button link size="small" @click="clearNotifications">清空</el-button>
           </div>
           <div v-if="!notifications.length" class="notify-empty">暂无消息</div>
           <div v-else class="notify-items">
@@ -46,10 +44,10 @@
                   n.type === 'error'
                     ? 'danger'
                     : n.type === 'success'
-                    ? 'success'
-                    : n.type === 'warning'
-                    ? 'warning'
-                    : 'info'
+                      ? 'success'
+                      : n.type === 'warning'
+                        ? 'warning'
+                        : 'info'
                 "
                 size="small"
                 >{{ n.type }}</el-tag
@@ -70,185 +68,181 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { notifications, clearNotifications } from "@/composables/notifyBus";
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { notifications, clearNotifications } from '@/composables/notifyBus'
 
-const route = useRoute();
-const router = useRouter();
-const keyword = ref("");
+const route = useRoute()
+const router = useRouter()
+const keyword = ref('')
 
-type Crumb = { label: string; to: { name?: string; path?: string } };
+type Crumb = { label: string; to: { name?: string; path?: string } }
 const crumbItems = computed<Crumb[]>(() => {
-  const items: Crumb[] = [{ label: "首页", to: { path: "/home" } }];
-  const matched = route.matched;
+  const items: Crumb[] = [{ label: '首页', to: { path: '/home' } }]
+  const matched = route.matched
   const themeContainers = new Set([
-    "分类主题管理",
-    "企业出口风险分类",
-    "敏感物品管控",
-    "重点物品",
-    "跨境电商出口敏感指标数频分配",
-  ]);
-  const ratingContainers = new Set(["企业分类评级画像", "标签管理"]);
+    '分类主题管理',
+    '企业出口风险分类',
+    '敏感物品管控',
+    '重点物品',
+    '跨境电商出口敏感指标数频分配'
+  ])
+  const ratingContainers = new Set(['企业分类评级画像', '标签管理'])
   for (const m of matched) {
-    const nm = String(m.name ?? "");
-    if (!nm) continue;
-    if (nm === "首页") continue;
+    const nm = String(m.name ?? '')
+    if (!nm) continue
+    if (nm === '首页') continue
     if (themeContainers.has(nm)) {
-      items.push({ label: nm, to: { path: "/theme-management" } });
-      continue;
+      items.push({ label: nm, to: { path: '/theme-management' } })
+      continue
     }
     if (ratingContainers.has(nm)) {
-      items.push({ label: nm, to: { path: "/rating-profile" } });
-      continue;
+      items.push({ label: nm, to: { path: '/rating-profile' } })
+      continue
     }
     items.push({
       label: nm || String(m.path),
-      to: nm ? { name: nm } : { path: m.path },
-    });
+      to: nm ? { name: nm } : { path: m.path }
+    })
   }
-  return items;
-});
+  return items
+})
 
 const onCrumbClick = (index: number) => {
-  const c = crumbItems.value[index];
-  if (c?.to) router.push(c.to as any);
-};
+  const c = crumbItems.value[index]
+  if (c?.to) router.push(c.to as any)
+}
 
 const onSearch = () => {
-  const k = keyword.value.trim();
-  if (!k) return;
-  const rec = fuzzyMatch(k);
+  const k = keyword.value.trim()
+  if (!k) return
+  const rec = fuzzyMatch(k)
   if (rec) {
-    if (rec.route?.name || rec.route?.path) router.push(rec.route as any);
-    else router.push({ name: rec.name });
+    if (rec.route?.name || rec.route?.path) router.push(rec.route as any)
+    else router.push({ name: rec.name })
   }
-};
+}
 
 type DictItem = {
-  name: string;
-  aliases: string[];
-  route?: { name?: string; path?: string; query?: Record<string, any> };
-};
+  name: string
+  aliases: string[]
+  route?: { name?: string; path?: string; query?: Record<string, any> }
+}
 const dictionary: DictItem[] = [
   {
-    name: "两用物项",
-    aliases: ["lywx", "lianyongwuxiang", "liangyongwuxiang"],
-    route: { name: "两用物项" },
+    name: '两用物项',
+    aliases: ['lywx', 'lianyongwuxiang', 'liangyongwuxiang'],
+    route: { name: '两用物项' }
   },
   {
-    name: "冷冻水产品",
-    aliases: ["ldscp", "lengdongshuichanpin"],
-    route: { name: "冷冻水产品" },
+    name: '冷冻水产品',
+    aliases: ['ldscp', 'lengdongshuichanpin'],
+    route: { name: '冷冻水产品' }
   },
   {
-    name: "数频分配",
-    aliases: ["spfp", "shupinfenpei"],
-    route: { name: "数频分配" },
+    name: '数频分配',
+    aliases: ['spfp', 'shupinfenpei'],
+    route: { name: '数频分配' }
   },
   {
-    name: "企业基本信息",
-    aliases: ["qybxxx", "qiyebasexinxi", "qiyebijiaoxinxi", "qiyebasics"],
-    route: { name: "企业基本信息" },
+    name: '企业基本信息',
+    aliases: ['qybxxx', 'qiyebasexinxi', 'qiyebijiaoxinxi', 'qiyebasics'],
+    route: { name: '企业基本信息' }
   },
   {
-    name: "标签列表",
-    aliases: ["bqlb", "biaoqianliebiao"],
-    route: { name: "标签列表" },
+    name: '标签列表',
+    aliases: ['bqlb', 'biaoqianliebiao'],
+    route: { name: '标签列表' }
   },
   {
-    name: "切面分析",
-    aliases: ["qmfx", "qiemianfenxi"],
-    route: { name: "切面分析" },
+    name: '切面分析',
+    aliases: ['qmfx', 'qiemianfenxi'],
+    route: { name: '切面分析' }
   },
   {
-    name: "政策惠企",
-    aliases: ["zchk", "zhengcehuiqi"],
-    route: { name: "政策惠企" },
+    name: '政策推送',
+    aliases: ['zchk', 'zhengcehuiqi'],
+    route: { name: '政策推送' }
   },
   // 建模面板子功能
   {
-    name: "正在使用的算法",
-    aliases: ["zzyssdsl", "xgboost", "current-alg"],
+    name: '正在使用的算法',
+    aliases: ['zzyssdsl', 'xgboost', 'current-alg'],
     route: {
-      name: "两用物项",
-      query: { tab: "modeling", panelActive: "alg-current" },
-    },
+      name: '两用物项',
+      query: { tab: 'modeling', panelActive: 'alg-current' }
+    }
   },
   {
-    name: "可选算法",
-    aliases: ["kxsfa", "optional-alg", "lightgbm"],
+    name: '可选算法',
+    aliases: ['kxsfa', 'optional-alg', 'lightgbm'],
     route: {
-      name: "两用物项",
-      query: { tab: "modeling", panelActive: "alg-optional" },
-    },
+      name: '两用物项',
+      query: { tab: 'modeling', panelActive: 'alg-optional' }
+    }
   },
   {
-    name: "前期数据准备",
-    aliases: ["qqsjzb", "prep"],
+    name: '前期数据准备',
+    aliases: ['qqsjzb', 'prep'],
     route: {
-      name: "两用物项",
-      query: { tab: "modeling", panelActive: "prep" },
-    },
+      name: '两用物项',
+      query: { tab: 'modeling', panelActive: 'prep' }
+    }
   },
   {
-    name: "模型训练过程",
-    aliases: ["mxxlgc", "train"],
+    name: '模型训练过程',
+    aliases: ['mxxlgc', 'train'],
     route: {
-      name: "两用物项",
-      query: { tab: "modeling", panelActive: "train" },
-    },
+      name: '两用物项',
+      query: { tab: 'modeling', panelActive: 'train' }
+    }
   },
   // 调优面板概览
   {
-    name: "参数调优",
-    aliases: ["csty", "tuning", "params"],
-    route: { name: "两用物项", query: { tab: "tuning" } },
-  },
-];
+    name: '参数调优',
+    aliases: ['csty', 'tuning', 'params'],
+    route: { name: '两用物项', query: { tab: 'tuning' } }
+  }
+]
 
-const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "");
+const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '')
 const fuzzyMatch = (k: string): DictItem | null => {
-  const q = normalize(k);
+  const q = normalize(k)
   return (
     dictionary.find(
       (d) =>
         normalize(d.name).includes(q) ||
         q.includes(normalize(d.name)) ||
-        d.aliases.some(
-          (a) => normalize(a).includes(q) || q.includes(normalize(a))
-        )
+        d.aliases.some((a) => normalize(a).includes(q) || q.includes(normalize(a)))
     ) || null
-  );
-};
+  )
+}
 
 const querySearch = (q: string, cb: (list: { value: string }[]) => void) => {
-  const qn = normalize(q);
+  const qn = normalize(q)
   const rec = dictionary.filter(
     (d) =>
       normalize(d.name).includes(qn) ||
       qn.includes(normalize(d.name)) ||
-      d.aliases.some(
-        (a) => normalize(a).includes(qn) || qn.includes(normalize(a))
-      )
-  );
-  cb(rec.map((d) => ({ value: d.name })));
-};
+      d.aliases.some((a) => normalize(a).includes(qn) || qn.includes(normalize(a)))
+  )
+  cb(rec.map((d) => ({ value: d.name })))
+}
 const onSelectSuggestion = (item: { value: string }) => {
-  const rec = dictionary.find((d) => d.name === item.value);
+  const rec = dictionary.find((d) => d.name === item.value)
   if (rec) {
-    if (rec.route?.name || rec.route?.path) router.push(rec.route as any);
-    else router.push({ name: rec.name });
+    if (rec.route?.name || rec.route?.path) router.push(rec.route as any)
+    else router.push({ name: rec.name })
   }
-};
+}
 
 const formatTime = (t: number) => {
-  const d = new Date(t);
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const d = new Date(t)
+  const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
     d.getHours()
-  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-};
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 </script>
 
 <style scoped>
