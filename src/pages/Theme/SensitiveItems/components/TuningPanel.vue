@@ -448,6 +448,7 @@
             <el-step title="可视化展示" @click="goStep(4)" />
           </el-steps>
         </div>
+
         <div class="visual-wrap">
           <div class="chart-box">
             <div ref="abcPieRef" class="chart" />
@@ -499,9 +500,7 @@
           </div>
         </div>
         <div class="footer footer-fixed floating-footer" :style="footerFixedStyle">
-          <el-button @click="reset">重置</el-button>
-          <el-button @click="prevStep">上一步</el-button>
-          <el-button type="primary" @click="nextStep">下一步</el-button>
+          <el-button type="primary" @click="backToTopic">返回切面视角</el-button>
         </div>
       </div>
 
@@ -522,7 +521,7 @@
             <iframe :src="shapCluster1Url" class="chart" />
           </div>
           <div class="tag-assign">
-            <div class="title">企业标签打标</div>
+            <div class="title">企业标签配置</div>
             <el-table :data="companyScoresView" height="420">
               <el-table-column prop="category" label="类别" width="120" />
               <el-table-column prop="class" label="分类" width="120" />
@@ -558,8 +557,7 @@
             <el-table-column prop="score" label="评分" width="120" />
           </el-table>
           <div class="footer footer-fixed floating-footer" :style="footerFixedStyle">
-            <el-button>取消</el-button>
-            <el-button type="primary">详细结果浏览</el-button>
+            <el-button type="primary" @click="finishAndGoVisual">提交</el-button>
           </div>
         </div>
       </div>
@@ -574,10 +572,17 @@ import { useRouter } from 'vue-router'
 import {
   getTagDistribution,
   getDualUseItems,
+  getTuningModels,
+  cloneDualUseItemsTuned,
+  updateDualUseItemTunedTag,
+  getDualUseItemsTuned,
   createTuningModel,
   renameTuningModel,
-  deleteTuningModel
+  deleteTuningModel,
+  getTags,
+  updateEnterpriseTags
 } from '@/services/api'
+import { notifySuccess, notifyWarn, notifyError, notifyInfo } from '@/composables/notifyBus'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -652,6 +657,9 @@ const selectedCategory = ref('')
 const openCategory = (category: string) => {
   selectedCategory.value = category
   categoryView.value = true
+  setTimeout(async () => {
+    if (currentModelId.value) await loadTunedRows(currentModelId.value)
+  }, 0)
 }
 const backCategory = () => {
   categoryView.value = false
@@ -681,6 +689,18 @@ const enableVersion = (v: string) => {
   active.value = `${v}-filter`
   stepIndex.value = 0
   reset()
+  setTimeout(async () => {
+    try {
+      await ensureModelList()
+      const id = await resolveModelId(v)
+      if (id) {
+        currentModelId.value = id
+        await ensureClone(id)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, 0)
 }
 const disableVersion = (v: string) => {
   if (versions[v]) versions[v].enabled = false
@@ -728,7 +748,7 @@ const confirmDeleteStep = () => {
     const id = versions[v]?.id || v
     deleteTuningModel(id)
   } catch (e) {
-    ElMessage.error('删除失败')
+    notifyError('删除失败')
   }
   deleteDialogVisible.value = false
 }
@@ -766,7 +786,7 @@ const confirmCreateVersion = async () => {
     })
     if (resp?.id) versions[key].id = String(resp.id)
   } catch (e) {
-    ElMessage.error('创建失败')
+    notifyError('创建失败')
   }
   createDialogVisible.value = false
   enableVersion(key)
@@ -786,7 +806,7 @@ const confirmRenameVersion = () => {
     const id = versions[v]?.id || v
     renameTuningModel(id, { name: renameName.value })
   } catch (e) {
-    ElMessage.error('重命名失败')
+    notifyError('重命名失败')
   }
   renameDialogVisible.value = false
 }
@@ -1122,6 +1142,36 @@ const toBasic = (row: any) => {
   if (!name) return
   router.push({ name: '企业基本信息', query: { focusName: name } })
 }
+const currentModelId = ref<number | null>(null)
+const ensureModelList = async () => {
+  try {
+    const resp: any = await getTuningModels()
+    const list: any[] = Array.isArray(resp?.rows) ? resp.rows : Array.isArray(resp) ? resp : []
+    for (const m of list) {
+      const key = String(m?.name || '').trim()
+      if (!key) continue
+      if (!versions[key]) versions[key] = { exists: true, enabled: false } as any
+      versions[key].exists = true
+      versions[key].name = key
+      versions[key].id = String(m?.id)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+const resolveModelId = async (v: string) => {
+  const id = versions[v]?.id
+  if (id) return Number(id)
+  await ensureModelList()
+  return Number(versions[v]?.id || NaN)
+}
+const ensureClone = async (modelId: number) => {
+  try {
+    await cloneDualUseItemsTuned({ modelId })
+  } catch {
+    /* ignore */
+  }
+}
 // 后端数据接入
 const page = ref(0)
 const size = ref(100)
@@ -1217,11 +1267,11 @@ const loadEtps = async () => {
     checkedColumns.value = orderKeys(
       allColumns.value.map((c: ColumnDef) => c.key).filter((k) => hasDataKey(k))
     )
-    if (norm.length) ElMessage.success('获取企业信息成功')
-    else ElMessage.warning('后端返回空数据')
+    if (norm.length) notifySuccess('已获取企业信息', `共 ${norm.length} 条`)
+    else notifyWarn('后端返回空数据')
   } catch (e) {
     if (!rows.length) filteredRows.value = [] as any
-    ElMessage.error('后端无数据或未联通')
+    notifyError('后端无数据或未联通')
   }
 }
 
@@ -1268,9 +1318,9 @@ const fetchAllData = async () => {
   try {
     await ensureAllDataLoaded()
     uiPage.value = 1
-    ElMessage.success(`已获取全部数据，共 ${rows.length} 条`)
+    notifySuccess('已获取全部数据', `共 ${rows.length} 条`)
   } catch {
-    ElMessage.error('获取全部数据失败')
+    notifyError('获取全部数据失败')
   } finally {
     loadingAll.value = false
   }
@@ -1823,12 +1873,26 @@ const companyScoresView = computed(() => {
   const cats = new Set(categoryNamesByK(checkedKSingle.value))
   return companyScoresBase.value.filter((r) => cats.has(r.category))
 })
-
+const tunedRows = ref<any[]>([])
+const loadTunedRows = async (modelId: number) => {
+  try {
+    const resp: any = await getDualUseItemsTuned({ modelId, page: 0, size: size.value })
+    const list: any[] = Array.isArray(resp?.rows) ? resp.rows : Array.isArray(resp) ? resp : []
+    tunedRows.value = list
+  } catch {
+    tunedRows.value = []
+  }
+}
 const categoryRows = computed(() => {
   if (!categoryView.value || !selectedCategory.value) return []
+  if (currentModelId.value && tunedRows.value.length) {
+    return tunedRows.value.filter((r: any) => {
+      const meta = (r as any).tuned_meta || {}
+      return String((meta as any).category_tag || '') === selectedCategory.value
+    })
+  }
   const k = checkedKSingle.value
   const cats = categoryNamesByK(k)
-  const idxOf = (name: string) => cats.indexOf(name)
   const computeCategory = (r: any) => {
     const id = Number((r as any).item_id)
     const seed = Number.isFinite(id) ? id : hash(String((r as any)['Consignee Enterprise'] || ''))
@@ -1838,14 +1902,28 @@ const categoryRows = computed(() => {
   return (filteredRows.value as any[]).filter((r) => computeCategory(r) === selectedCategory.value)
 })
 
-const tagOptions = ['价格指纹风险高', '物流指纹风险低', '属地指纹风险高']
+const tagOptions = ref<string[]>([])
 const tagAssignments = reactive<Record<string, string[]>>({})
 
 const tagRows = ref<{ name: string; feature: string; slice: string; expert?: string }[]>([])
 const refreshTagRows = () => {
-  const names = selectedEnterprises.value.length ? selectedEnterprises.value : []
+  let names = selectedEnterprises.value.length ? selectedEnterprises.value : []
   if (!names.length) {
-    ElMessage.error('后端无数据或未联通')
+    names = Array.from(
+      new Set(
+        (filteredRows.value as any[])
+          .map((r: any) =>
+            String(
+              (r as any)['Consignee Enterprise'] ?? (r as any).etps_name ?? (r as any).name ?? ''
+            )
+          )
+          .filter((s: string) => !!s)
+      )
+    )
+    selectedEnterprises.value = names
+  }
+  if (!names.length) {
+    notifyError('后端无数据或未联通')
     return
   }
   const feats = checkedFeatures.value.length
@@ -1866,7 +1944,7 @@ const reset = () => {
 }
 const finish = () => {
   if (!filteredRows.value.length) {
-    ElMessage.error('后端无数据或未联通')
+    notifyError('后端无数据或未联通')
     return
   }
   updatedScores.value = filteredRows.value.slice(0, 10).map((r: any, i: number) => ({
@@ -1874,7 +1952,69 @@ const finish = () => {
     ratingDetail: '数据来源：后端',
     score: Number((80 + Math.random() * 10).toFixed(0))
   }))
+  setTimeout(async () => {
+    try {
+      if (currentModelId.value) {
+        const k = checkedKSingle.value
+        const cats = categoryNamesByK(k)
+        const computeCategory = (r: any) => {
+          const id = Number((r as any).item_id)
+          const seed = Number.isFinite(id)
+            ? id
+            : hash(String((r as any)['Consignee Enterprise'] || ''))
+          const idx = Math.abs(seed) % k
+          return cats[idx]
+        }
+        const rowsAll = filteredRows.value as any[]
+        for (const r of rowsAll) {
+          const cat = computeCategory(r)
+          const itemId = Number((r as any).item_id)
+          if (!Number.isFinite(itemId)) continue
+          await updateDualUseItemTunedTag(itemId, {
+            modelId: currentModelId.value,
+            key: 'category_tag',
+            value: cat
+          })
+          const labels = (tagAssignments as any)[cat] || []
+          await updateDualUseItemTunedTag(itemId, {
+            modelId: currentModelId.value,
+            key: 'category_labels',
+            value: labels
+          })
+          const name = String(
+            (r as any)['Consignee Enterprise'] ?? (r as any).etps_name ?? (r as any).name ?? ''
+          )
+          if (name && labels.length) {
+            await updateEnterpriseTags({ name, tags: labels, source: 'manual' }).catch(() => null)
+          }
+        }
+        await loadTunedRows(currentModelId.value)
+        notifySuccess('标签写入成功', `已写入 ${rowsAll.length} 条`)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, 0)
   finished.value = true
+}
+
+const finishAndGoVisual = async () => {
+  const reqCats = categoryNamesByK(checkedKSingle.value)
+  const missing = reqCats.filter(
+    (c) => !Array.isArray(tagAssignments[c]) || !(tagAssignments[c] || []).length
+  )
+  if (missing.length) {
+    notifyWarn('标签未完成', `请为以下类别配置标签：${missing.join('、')}`)
+    return
+  }
+  if (!finished.value) await Promise.resolve(finish())
+  const v = versionOf(active.value)
+  setVersionSteps(v)
+  goStep(4)
+}
+
+const backToTopic = () => {
+  active.value = 'topic'
 }
 
 let disposers: (() => void)[] = []
@@ -1923,6 +2063,30 @@ const mountCharts = async () => {
 onMounted(async () => {
   await loadEtps()
   await fetchAllData()
+  try {
+    const t: any = await getTags()
+    const list = Array.isArray(t?.rows) ? t.rows : []
+    tagOptions.value = list
+      .map((x: any) => String(x?.name || ''))
+      .filter((s: string) => s && s.length)
+  } catch {
+    tagOptions.value = []
+  }
+  if (!selectedEnterprises.value.length && (rows.length || (filteredRows.value as any[]).length)) {
+    const src = rows.length ? rows : (filteredRows.value as any[])
+    const names = Array.from(
+      new Set(
+        src
+          .map((r: any) =>
+            String(
+              (r as any)['Consignee Enterprise'] ?? (r as any).etps_name ?? (r as any).name ?? ''
+            )
+          )
+          .filter((s: string) => !!s)
+      )
+    )
+    selectedEnterprises.value = names
+  }
   boxMetric.value = featuresSorted.value[0] || ''
   mountCharts()
   updateToolbarWidth()
@@ -2336,7 +2500,8 @@ onUnmounted(() => {
 }
 .tag-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto;
   gap: 12px;
   margin-top: 12px;
 }
@@ -2344,6 +2509,11 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+/* 放大对比区图表高度并横向填充 */
+.tag-card .shap-compare .chart {
+  height: 440px;
+  width: 100%;
 }
 .category-view {
   margin-top: 12px;

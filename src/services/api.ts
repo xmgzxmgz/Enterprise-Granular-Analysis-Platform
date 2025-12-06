@@ -91,11 +91,16 @@ export async function updateEnterpriseTags(payload: {
 export async function getPolicies(
   params?: Record<string, string | number | boolean | null | undefined>
 ) {
-  const qs = new URLSearchParams()
+  const parts: string[] = []
   Object.entries(params || {}).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && String(v).length) qs.append(k, String(v))
+    if (k === 'all' && (v === true || v === 'true' || v === 1 || v === '1')) {
+      parts.push('all')
+      return
+    }
+    if (v !== undefined && v !== null && String(v).length)
+      parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
   })
-  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  const suffix = parts.length ? `?${parts.join('&')}` : ''
   return request<any>(`/policies${suffix}`)
 }
 
@@ -148,4 +153,42 @@ export async function deleteTuningModel(idOrName: string) {
   return request<void>(`/tuning/models/${encodeURIComponent(idOrName)}`, {
     method: 'DELETE'
   })
+}
+
+export async function getTuningModels() {
+  return request<any>('/tuning/models')
+}
+
+export async function cloneDualUseItemsTuned(payload: { modelId: number }) {
+  return request<any>('/dual_use_items_tuned/clone', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function updateDualUseItemTunedTag(
+  itemId: number | string,
+  payload: { modelId: number; key: string; value: any }
+) {
+  const id = encodeURIComponent(String(itemId))
+  return request<any>(`/dual_use_items_tuned/${id}/tag`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function getDualUseItemsTuned(params: {
+  modelId: number | string
+  page?: number
+  size?: number
+  q?: string
+}) {
+  const qs = new URLSearchParams()
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && String(v).length) qs.append(k, String(v))
+  })
+  const suffix = qs.toString() ? `?${qs.toString()}` : ''
+  return request<any>(`/dual_use_items_tuned${suffix}`)
 }
